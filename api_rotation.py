@@ -7,6 +7,8 @@ from typing import List, Dict, Optional, Tuple
 from models import APIKey, SystemLog, APIKeyStatus, db
 from datetime import datetime, timedelta
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class APIRotationManager:
     def __init__(self):
@@ -22,28 +24,26 @@ class APIRotationManager:
         return sorted(active_keys, key=lambda k: k.priority_score, reverse=True)
     
     def get_next_api_key(self) -> Optional[APIKey]:
-        """Get the next API key to use (round-robin with failover)"""
+        """Get the API key with highest credits (always prioritize high-credit keys)"""
         active_keys = self.get_active_api_keys()
         
         if not active_keys:
             self._log_system("error", "No active API keys available")
             return None
         
-        # Reset index if it's beyond the available keys
-        if self._current_key_index >= len(active_keys):
-            self._current_key_index = 0
-        
-        key = active_keys[self._current_key_index]
-        self._current_key_index += 1
+        # Always return the key with highest credits (first in sorted list)
+        # This ensures we always use the API key with the most remaining credits
+        key = active_keys[0]
+        print(f"DEBUG: Selected API key with {key.remaining_credits} credits (highest available)")
         
         return key
     
     def search_google_bulk(self, queries: List[str], max_results: int = 10, progress_callback=None) -> List[Tuple[str, List[Dict], Optional[str]]]:
         """
-        Perform bulk searches with optimized batching and progress tracking
+        Perform bulk searches with PARALLEL processing (10 simultaneous searches)
         Returns: List of (query, results, api_key_used) tuples
         """
-        print(f"DEBUG: Starting bulk search with {len(queries)} queries")
+        print(f"DEBUG: Starting PARALLEL bulk search with {len(queries)} queries")
         results = []
         total_queries = len(queries)
         
@@ -51,38 +51,47 @@ class APIRotationManager:
             print("DEBUG: No queries to process")
             return results
         
-        # Process queries in batches
-        for i in range(0, total_queries, self._batch_size):
-            batch = queries[i:i + self._batch_size]
-            batch_results = []
-            
-            print(f"DEBUG: Processing batch {i//self._batch_size + 1}, queries {i+1}-{min(i+len(batch), total_queries)} of {total_queries}")
-            
-            for j, query in enumerate(batch):
-                try:
-                    print(f"DEBUG: Searching for query: '{query}'")
-                    search_results, api_key_used = self.search_google_with_rotation(query, max_results)
-                    batch_results.append((query, search_results, api_key_used))
-                    print(f"DEBUG: Got {len(search_results)} results for query: '{query}'")
-                except Exception as e:
-                    print(f"DEBUG: Error for query '{query}': {str(e)}")
-                    self._log_system("error", f"Bulk search failed for query '{query}': {str(e)}")
-                    batch_results.append((query, [], None))
-                
-                # Progress callback
-                if progress_callback:
-                    progress = ((i + len(batch_results)) / total_queries) * 100
-                    print(f"DEBUG: Progress callback: {progress}% for query '{query}'")
-                    progress_callback(progress, query)
-            
-            results.extend(batch_results)
-            
-            # Rate limiting between batches
-            if i + self._batch_size < total_queries:
-                print(f"DEBUG: Sleeping for {self._rate_limit_delay}s between batches")
-                time.sleep(self._rate_limit_delay)
+        completed_count = 0
+        max_workers = 10  # Run 10 searches simultaneously
         
-        print(f"DEBUG: Bulk search completed with {len(results)} total results")
+        def search_single_query(query):
+            """Single query search function for parallel execution"""
+            try:
+                print(f"DEBUG: PARALLEL search starting for query: '{query}'")
+                search_results, api_key_used = self.search_google_with_rotation(query, max_results)
+                print(f"DEBUG: PARALLEL search completed for query: '{query}' - got {len(search_results)} results")
+                return (query, search_results, api_key_used)
+            except Exception as e:
+                print(f"DEBUG: PARALLEL search error for query '{query}': {str(e)}")
+                self._log_system("error", f"Parallel bulk search failed for query '{query}': {str(e)}")
+                return (query, [], None)
+        
+        # Execute searches in parallel with ThreadPoolExecutor
+        print(f"DEBUG: Starting ThreadPoolExecutor with {max_workers} workers")
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all queries for parallel execution
+            future_to_query = {executor.submit(search_single_query, query): query for query in queries}
+            
+            # Process completed searches as they finish
+            for future in as_completed(future_to_query):
+                try:
+                    result = future.result()
+                    results.append(result)
+                    completed_count += 1
+                    
+                    # Progress callback
+                    if progress_callback:
+                        progress = (completed_count / total_queries) * 100
+                        print(f"DEBUG: PARALLEL progress: {progress:.1f}% ({completed_count}/{total_queries}) completed")
+                        progress_callback(progress, result[0])  # result[0] is the query
+                        
+                except Exception as e:
+                    query = future_to_query[future]
+                    print(f"DEBUG: PARALLEL search exception for query '{query}': {str(e)}")
+                    results.append((query, [], None))
+                    completed_count += 1
+        
+        print(f"DEBUG: PARALLEL bulk search completed with {len(results)} total results")
         return results
     
     def search_google_with_rotation(self, query: str, max_results: int = 10, max_retries: int = None) -> Tuple[List[Dict], Optional[str]]:
