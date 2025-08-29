@@ -7,18 +7,18 @@ import json
 db = SQLAlchemy()
 
 class UserRole(Enum):
-    ADMIN = "admin"
-    CLIENT = "client"
+    ADMIN = "ADMIN"
+    CLIENT = "CLIENT"
 
 class APIKeyStatus(Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    FAILED = "failed"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    FAILED = "FAILED"
 
 class TransactionStatus(Enum):
-    PENDING = "pending"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
