@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Domain Upgrade Pro - Find Premium Domain Upgrade Opportunities{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="row">
+    <div class="col-lg-12 text-center">
+        <h1 class="display-3 fw-bold text-primary">Domain Upgrade Pro</h1>
+        <p class="lead fs-4 text-muted mb-4">Transform Domain Sales with Data-Driven Intelligence</p>
+        <p class="fs-5 mb-5">Find businesses that could upgrade to premium domain names using advanced keyword analysis and Google search intelligence.</p>
+        
+        {% if not current_user.is_authenticated %}
+            <div class="mt-4">
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-3 px-5 py-3">
+                    <i class="fas fa-rocket"></i> Start Free Trial
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg px-5 py-3">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+            </div>
+            <p class="mt-3 text-muted">
+                <i class="fas fa-gift text-success"></i> <strong>5 free searches</strong> • No credit card required
+            </p>
+        {% else %}
+            <div class="mt-4">
+                <a href="{{ url_for('search') }}" class="btn btn-success btn-lg px-5 py-3">
+                    <i class="fas fa-search"></i> Start Searching Now
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="fas fa-search fa-2x text-primary"></i>
+                </div>
+                <h5 class="fw-bold">Smart Keyword Analysis</h5>
+                <p class="text-muted">Enter keywords and discover businesses on Google that could benefit from better domain names. Our algorithm identifies upgrade opportunities automatically.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="fas fa-coins fa-2x text-warning"></i>
+                </div>
+                <h5 class="fw-bold">Pay-Per-Use System</h5>
+                <p class="text-muted">Only pay for what you use. Each search costs 1 coin. No monthly subscriptions, no wasted credits. Start with 5 free trial searches!</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="fas fa-download fa-2x text-success"></i>
+                </div>
+                <h5 class="fw-bold">Export & Outreach</h5>
+                <p class="text-muted">Download your results in CSV or Excel format. Get contact details, rankings, and upgrade opportunities ready for your outreach campaigns.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How It Works Section -->
+<div class="row mt-5 py-5 bg-light">
+    <div class="col-lg-10 mx-auto">
+        <h2 class="text-center mb-5 fw-bold">How It Works</h2>
+        <div class="row">
+            <div class="col-md-3 text-center mb-4">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <span class="fw-bold fs-4">1</span>
+                </div>
+                <h6 class="fw-bold">Enter Keywords</h6>
+                <small class="text-muted">Input business-relevant keywords that describe your domain's industry or niche</small>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <span class="fw-bold fs-4">2</span>
+                </div>
+                <h6 class="fw-bold">AI Google Search</h6>
+                <small class="text-muted">Our system searches Google using advanced algorithms to find businesses ranking for those keywords</small>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <span class="fw-bold fs-4">3</span>
+                </div>
+                <h6 class="fw-bold">Find Upgrade Opportunities</h6>
+                <small class="text-muted">Identify businesses using suboptimal domains that could benefit from upgrading to your premium domain</small>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <span class="fw-bold fs-4">4</span>
+                </div>
+                <h6 class="fw-bold">Export & Contact</h6>
+                <small class="text-muted">Download detailed reports and contact information for targeted outreach campaigns</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pricing Section -->
+<div class="row mt-5">
+    <div class="col-lg-12">
+        <h2 class="text-center mb-5 fw-bold">Simple, Transparent Pricing</h2>
+        <p class="text-center text-muted mb-5 fs-5">Pay only for what you use. No monthly fees, no contracts.</p>
+        
+        {% if pricing_packages %}
+        <div class="row justify-content-center">
+            {% for package in pricing_packages %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 border-0 shadow {% if package.name == 'Professional Pack' %}border-primary{% endif %}">
+                    {% if package.name == 'Professional Pack' %}
+                    <div class="badge bg-primary position-absolute top-0 start-50 translate-middle px-3 py-2">
+                        Most Popular
+                    </div>
+                    {% endif %}
+                    <div class="card-body text-center p-4">
+                        <h4 class="fw-bold text-primary mb-3">{{ package.name }}</h4>
+                        <div class="mb-4">
+                            <span class="display-4 fw-bold">${{ "%.0f"|format(package.price_dollars) }}</span>
+                        </div>
+                        <div class="mb-4">
+                            <h5 class="text-success fw-bold">{{ package.coins }} Coins</h5>
+                            <p class="text-muted">{{ package.coins }} domain searches</p>
+                        </div>
+                        <div class="mb-4">
+                            <small class="text-muted">
+                                <i class="fas fa-calculator"></i> 
+                                ${{ "%.2f"|format(package.price_dollars / package.coins) }} per search
+                            </small>
+                        </div>
+                        <div class="d-grid">
+                            {% if current_user.is_authenticated %}
+                                <a href="{{ url_for('coins_dashboard') }}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-shopping-cart"></i> Buy Now
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-user-plus"></i> Get Started
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center">
+            <p class="text-muted">Pricing packages will be available soon.</p>
+        </div>
+        {% endif %}
+        
+        <div class="row mt-4">
+            <div class="col-lg-8 mx-auto">
+                <div class="card bg-light border-0">
+                    <div class="card-body text-center">
+                        <h5 class="fw-bold mb-3">What's included in every package:</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled text-start">
+                                    <li><i class="fas fa-check text-success me-2"></i> Unlimited keyword searches</li>
+                                    <li><i class="fas fa-check text-success me-2"></i> Google search integration</li>
+                                    <li><i class="fas fa-check text-success me-2"></i> Competitor analysis</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled text-start">
+                                    <li><i class="fas fa-check text-success me-2"></i> CSV/Excel export</li>
+                                    <li><i class="fas fa-check text-success me-2"></i> Contact information</li>
+                                    <li><i class="fas fa-check text-success me-2"></i> 24/7 support</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contact Section -->
+<div class="row mt-5 py-5 bg-primary text-white">
+    <div class="col-lg-8 mx-auto text-center">
+        <h2 class="mb-4 fw-bold">Ready to Transform Your Domain Sales?</h2>
+        <p class="lead mb-5">Join domain investors who are already using data-driven strategies to identify the best upgrade opportunities.</p>
+        
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card bg-white text-dark border-0">
+                    <div class="card-body">
+                        <i class="fas fa-envelope fa-2x text-primary mb-3"></i>
+                        <h5 class="fw-bold">Email Support</h5>
+                        <p class="text-muted">Get detailed assistance via email</p>
+                        <a href="mailto:bajjouyounes@gmail.com" class="btn btn-outline-primary">
+                            <i class="fas fa-envelope"></i> bajjouyounes@gmail.com
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card bg-white text-dark border-0">
+                    <div class="card-body">
+                        <i class="fab fa-whatsapp fa-2x text-success mb-3"></i>
+                        <h5 class="fw-bold">WhatsApp Support</h5>
+                        <p class="text-muted">Quick help for urgent questions</p>
+                        <a href="https://wa.me/212699095328?text=Hello%20Domain%20Upgrade%20Pro%20team,%20I%20need%20assistance%20with..." 
+                           target="_blank" class="btn btn-outline-success">
+                            <i class="fab fa-whatsapp"></i> Chat Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <a href="{{ url_for('contact') }}" class="btn btn-light btn-lg px-5 py-3">
+                <i class="fas fa-paper-plane"></i> Send us a Message
+            </a>
+        </div>
+        
+        {% if not current_user.is_authenticated %}
+        <div class="mt-5 pt-5 border-top border-light">
+            <h3 class="mb-4">Start Your Free Trial Today</h3>
+            <a href="{{ url_for('register') }}" class="btn btn-warning btn-lg px-5 py-3">
+                <i class="fas fa-rocket"></i> Get 5 Free Searches
+            </a>
+            <p class="mt-3"><small>No credit card required • Start searching in 30 seconds</small></p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

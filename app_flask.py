@@ -85,6 +85,12 @@ def create_app():
                 return redirect(url_for('client_dashboard'))
         return render_template('index.html')
     
+    @app.route('/home')
+    def home():
+        # Get pricing packages for the homepage
+        pricing_packages = PricingPackage.query.filter_by(is_active=True).order_by(PricingPackage.coins).all()
+        return render_template('home.html', pricing_packages=pricing_packages)
+    
     @app.route('/about-us')
     def about_us():
         return render_template('about_us.html')
