@@ -55,16 +55,21 @@ class APIRotationManager:
         max_workers = 10  # Run 10 searches simultaneously
         
         def search_single_query(query):
-            """Single query search function for parallel execution"""
-            try:
-                print(f"DEBUG: PARALLEL search starting for query: '{query}'")
-                search_results, api_key_used = self.search_google_with_rotation(query, max_results)
-                print(f"DEBUG: PARALLEL search completed for query: '{query}' - got {len(search_results)} results")
-                return (query, search_results, api_key_used)
-            except Exception as e:
-                print(f"DEBUG: PARALLEL search error for query '{query}': {str(e)}")
-                self._log_system("error", f"Parallel bulk search failed for query '{query}': {str(e)}")
-                return (query, [], None)
+            """Single query search function for parallel execution with Flask context"""
+            # Import Flask app here to avoid circular imports
+            from flask import current_app
+            
+            # Each thread needs its own application context for database access
+            with current_app.app_context():
+                try:
+                    print(f"DEBUG: PARALLEL search starting for query: '{query}'")
+                    search_results, api_key_used = self.search_google_with_rotation(query, max_results)
+                    print(f"DEBUG: PARALLEL search completed for query: '{query}' - got {len(search_results)} results")
+                    return (query, search_results, api_key_used)
+                except Exception as e:
+                    print(f"DEBUG: PARALLEL search error for query '{query}': {str(e)}")
+                    self._log_system("error", f"Parallel bulk search failed for query '{query}': {str(e)}")
+                    return (query, [], None)
         
         # Execute searches in parallel with ThreadPoolExecutor
         print(f"DEBUG: Starting ThreadPoolExecutor with {max_workers} workers")
