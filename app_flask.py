@@ -341,39 +341,39 @@ def create_app():
                 search_session.completed_at = datetime.utcnow()
                 db.session.commit()
                 
-                if all_results:
-                    # Filter results for UI display (only show upgrade opportunities)
-                    upgrade_results = [r for r in all_results if r.get('Is_Upgrade', False)]
-                    
-                    # Store search ID for downloads instead of full data in session
-                    latest_search = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
-                        SearchHistory.created_at.desc()).first()
-                    session['latest_search_id'] = latest_search.id if latest_search else None
-                    
-                    # Show success message based on upgrade opportunities
-                    total_count = len(all_results)
-                    upgrade_count = len(upgrade_results)
-                    
-                    if upgrade_count > 0:
-                        flash(f'Search completed! Found {upgrade_count} upgrade opportunities out of {total_count} total results.', 'success')
-                    else:
-                        flash(f'Search completed! Found {total_count} potential matches but no clear upgrade opportunities.', 'info')
-                    
-                    # Update the search session with final statistics
-                    search_session.total_results = total_count
-                    search_session.upgrade_results = upgrade_count
-                    
-                    db.session.commit()
-                    
-                    # Show results directly on search page instead of redirect
-                    return render_template('client/search.html', 
-                                         show_results=True,
-                                         results=upgrade_results,
-                                         total_results=total_count,
-                                         upgrade_count=upgrade_count)
+                # Always process results, even if empty
+                # Filter results for UI display (only show upgrade opportunities) 
+                upgrade_results = [r for r in all_results if r.get('Is_Upgrade', False)] if all_results else []
+                
+                # Store search ID for downloads
+                latest_search = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
+                    SearchHistory.created_at.desc()).first()
+                session['latest_search_id'] = latest_search.id if latest_search else None
+                
+                # Calculate counts
+                total_count = len(all_results) if all_results else 0
+                upgrade_count = len(upgrade_results)
+                
+                # Update the search session with final statistics
+                search_session.total_results = total_count
+                search_session.upgrade_results = upgrade_count
+                db.session.commit()
+                
+                # Show success message based on results
+                if upgrade_count > 0:
+                    flash(f'Search completed! Found {upgrade_count} upgrade opportunities out of {total_count} total results.', 'success')
+                elif total_count > 0:
+                    flash(f'Search completed! Found {total_count} potential matches but no clear upgrade opportunities.', 'info')
                 else:
-                    flash('No results found for your keywords.', 'info')
-                    return render_template('client/search.html')
+                    flash('Search completed! No results found for your keywords.', 'warning')
+                
+                # Always show results page with data
+                return render_template('client/search.html', 
+                                     show_results=True,
+                                     results=upgrade_results,
+                                     all_results=all_results or [],
+                                     total_results=total_count,
+                                     upgrade_count=upgrade_count)
                 
             except Exception as e:
                 flash(f'Search error: {str(e)}', 'error')

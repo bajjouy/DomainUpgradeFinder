@@ -148,6 +148,12 @@
                     We found {{ total_results }} potential matches, but none were clear upgrade opportunities. 
                     You can download the full results to review partial matches.
                 </div>
+                {% elif total_results == 0 %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>No results found.</strong> 
+                    Try different keywords or check your spelling. The search completed successfully but didn't find any matches.
+                </div>
                 {% endif %}
             </div>
         </div>
