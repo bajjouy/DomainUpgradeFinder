@@ -347,9 +347,15 @@ def create_app():
             
             # Get input
             keywords_input = request.form.get('keywords', '').strip()
+            max_results = int(request.form.get('max_results', 10))
+            
             if not keywords_input:
                 flash('Please enter keywords to search', 'error')
                 return render_template('client/search.html')
+            
+            # Validate max_results range
+            if max_results < 10 or max_results > 100:
+                max_results = 10
             
             # Parse keywords (one set per line)
             keyword_sets = parse_domain_list(keywords_input)
@@ -378,6 +384,7 @@ def create_app():
                 search_session.total_keywords = total_searches
                 search_session.keyword_list = keywords_input
                 search_session.status = 'pending'
+                search_session.max_results = max_results  # Store max results setting
                 
                 db.session.add(search_session)
                 db.session.commit()
@@ -396,6 +403,7 @@ def create_app():
                 search_session.total_keywords = total_searches
                 search_session.keyword_list = keywords_input
                 search_session.status = 'processing'
+                search_session.max_results = max_results  # Store max results setting
                 db.session.add(search_session)
                 db.session.flush()
                 
@@ -405,9 +413,9 @@ def create_app():
                         flash('Insufficient coins', 'error')
                         break
                     
-                    # Perform search
+                    # Perform search with user-specified max results
                     search_start = datetime.utcnow()
-                    results, api_key_used = app.domain_analyzer.analyze_keywords(keywords)
+                    results, api_key_used = app.domain_analyzer.analyze_keywords(keywords, max_results=max_results)
                     search_duration = (datetime.utcnow() - search_start).total_seconds()
                     
                     # Save search history linked to session
@@ -527,10 +535,11 @@ def create_app():
                 search_session.current_keyword = current_keyword
                 db.session.commit()
             
-            # Use bulk search with progress tracking
-            print(f"DEBUG: About to start bulk search with {len(keyword_sets)} keyword sets")
+            # Use bulk search with progress tracking and user-specified max results
+            max_results = search_session.max_results or 10  # Use saved max_results or default to 10
+            print(f"DEBUG: About to start bulk search with {len(keyword_sets)} keyword sets, max_results={max_results}")
             bulk_results = app.domain_analyzer.api_manager.search_google_bulk(
-                keyword_sets, progress_callback=update_progress
+                keyword_sets, progress_callback=update_progress, max_results=max_results
             )
             print(f"DEBUG: Bulk search completed, got {len(bulk_results)} results")
             

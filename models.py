@@ -145,6 +145,7 @@ class SearchSession(db.Model):
     progress = db.Column(db.Float, default=0.0)  # Progress percentage
     current_keyword = db.Column(db.String(200))  # Currently processing keyword
     processing_time = db.Column(db.Float)  # Total processing time in seconds
+    max_results = db.Column(db.Integer, default=10)  # Google search result limit
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     
