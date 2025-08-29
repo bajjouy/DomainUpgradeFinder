@@ -157,10 +157,25 @@ def create_app():
         
         # Get API key stats with credit monitoring
         api_keys = APIKey.query.all()
+        
+        # Get live credit data from Serper API
+        from serper_api_utils import bulk_check_all_keys
+        live_credit_data = bulk_check_all_keys(api_keys)
+        
+        # Use live data if available, otherwise fall back to database
+        if live_credit_data['live_data_available']:
+            total_remaining = live_credit_data['total_live_remaining']
+            total_credits = live_credit_data['total_live_credits']
+            total_used = live_credit_data['total_live_used']
+            is_live_data = True
+        else:
+            # Fallback to database values
+            total_credits = sum(k.total_credits for k in api_keys if k.status == APIKeyStatus.ACTIVE)
+            total_used = sum(k.credits_used for k in api_keys if k.status == APIKeyStatus.ACTIVE)
+            total_remaining = total_credits - total_used
+            is_live_data = False
+            
         low_credit_keys = [k for k in api_keys if k.is_low_credits and k.status == APIKeyStatus.ACTIVE]
-        total_credits = sum(k.total_credits for k in api_keys if k.status == APIKeyStatus.ACTIVE)
-        total_used = sum(k.credits_used for k in api_keys if k.status == APIKeyStatus.ACTIVE)
-        total_remaining = total_credits - total_used
         
         # Recent activity
         recent_searches = SearchHistory.query.order_by(SearchHistory.created_at.desc()).limit(10).all()
@@ -175,6 +190,8 @@ def create_app():
                              total_credits=total_credits,
                              total_used=total_used,
                              total_remaining=total_remaining,
+                             live_credit_data=live_credit_data,
+                             is_live_data=is_live_data,
                              recent_searches=recent_searches,
                              recent_users=recent_users)
     
@@ -215,6 +232,45 @@ def create_app():
         
         flash(f'Credits updated for {api_key.key_name}', 'success')
         return redirect(url_for('admin_api_credits'))
+    
+    @app.route('/admin/sync-credits', methods=['POST'])
+    @admin_required
+    def sync_api_credits():
+        from serper_api_utils import bulk_check_all_keys
+        
+        api_keys = APIKey.query.filter_by(status=APIKeyStatus.ACTIVE).all()
+        live_data = bulk_check_all_keys(api_keys)
+        
+        synced_count = 0
+        errors = []
+        
+        # Update database with live credit data
+        for key_detail in live_data['key_details']:
+            if key_detail['is_live']:
+                api_key = APIKey.query.filter_by(key_name=key_detail['name']).first()
+                if api_key:
+                    # Update total credits from live API
+                    api_key.total_credits = key_detail['total_credits']
+                    # Calculate actual usage from live data
+                    actual_used = key_detail['total_credits'] - key_detail['credits_left']
+                    api_key.credits_used = actual_used
+                    synced_count += 1
+        
+        if live_data['errors']:
+            errors.extend(live_data['errors'])
+            
+        db.session.commit()
+        
+        if synced_count > 0:
+            flash(f'✅ Synced {synced_count} API key(s) with live data from Serper', 'success')
+        
+        if errors:
+            flash(f'⚠️ Some keys could not be synced: {"; ".join(errors[:3])}', 'warning')
+            
+        if synced_count == 0 and not errors:
+            flash('ℹ️ No active API keys found to sync', 'info')
+            
+        return redirect(url_for('admin_dashboard'))
     
     @app.route('/admin/api-keys')
     @admin_required
