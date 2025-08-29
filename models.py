@@ -78,15 +78,51 @@ class APIKey(db.Model):
     daily_limit = db.Column(db.Integer, default=2500)  # Serper.dev free tier limit
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Credit monitoring fields
+    total_credits = db.Column(db.Integer, default=2500)  # Total credits allocated for this key
+    credits_used = db.Column(db.Integer, default=0)  # Credits used so far
+    last_credit_check = db.Column(db.DateTime)  # Last time credits were updated
+    low_credit_alerted = db.Column(db.Boolean, default=False)  # Has low credit alert been sent
+    
     def __repr__(self):
         return f'<APIKey {self.key_name}>'
     
     def record_usage(self, success=True):
         self.usage_count += 1
         self.last_used = datetime.utcnow()
+        if success:
+            self.credits_used += 1  # Only count successful requests as credits used
         if not success:
             self.error_count += 1
             self.last_error = datetime.utcnow()
+    
+    @property
+    def remaining_credits(self):
+        """Calculate estimated remaining credits"""
+        return max(0, self.total_credits - self.credits_used)
+    
+    @property  
+    def credits_percentage(self):
+        """Get percentage of credits remaining"""
+        if self.total_credits == 0:
+            return 0
+        return (self.remaining_credits / self.total_credits) * 100
+    
+    @property
+    def is_low_credits(self):
+        """Check if credits are below 500 (warning threshold)"""
+        return self.remaining_credits < 500
+    
+    @property
+    def priority_score(self):
+        """Calculate priority score for API rotation (higher = use first)"""
+        # Prioritize keys with more remaining credits
+        base_score = self.remaining_credits
+        # Bonus for less recent usage (spread load)
+        if self.last_used:
+            hours_since_use = (datetime.utcnow() - self.last_used).total_seconds() / 3600
+            base_score += min(hours_since_use * 10, 100)  # Cap bonus at 100
+        return base_score
 
 class CoinTransaction(db.Model):
     __tablename__ = 'coin_transactions'

@@ -57,21 +57,37 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-info text-white">
+        <div class="card {{ 'bg-danger' if low_credit_keys|length > 0 else 'bg-info' }} text-white">
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4>{{ api_keys|length }}</h4>
-                        <span>API Keys</span>
+                        <h4>{{ total_remaining:,g }}</h4>
+                        <span>Credits Remaining</span>
+                        {% if low_credit_keys|length > 0 %}
+                            <small class="d-block">⚠️ {{ low_credit_keys|length }} low credit alerts</small>
+                        {% endif %}
                     </div>
                     <div class="align-self-center">
-                        <i class="fas fa-key fa-2x"></i>
+                        <i class="fas fa-credit-card fa-2x"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Low Credit Alert -->
+{% if low_credit_keys|length > 0 %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-danger alert-dismissible fade show">
+            <h5><i class="fas fa-exclamation-triangle"></i> API Credit Alert</h5>
+            <p><strong>{{ low_credit_keys|length }} API key(s)</strong> have less than 500 credits remaining. <a href="{{ url_for('admin_api_credits') }}" class="alert-link">View detailed credit status →</a></p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="row">
     <div class="col-md-6">
@@ -94,6 +110,9 @@
                 </a>
                 <a href="{{ url_for('admin_payment_methods') }}" class="btn btn-dark mb-2 w-100">
                     <i class="fas fa-cogs"></i> Payment Methods
+                </a>
+                <a href="{{ url_for('admin_api_credits') }}" class="btn btn-outline-danger mb-2 w-100">
+                    <i class="fas fa-chart-pie"></i> API Credits Monitor
                 </a>
             </div>
         </div>

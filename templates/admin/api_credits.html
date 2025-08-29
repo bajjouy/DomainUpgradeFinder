@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}API Credits Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-credit-card"></i> API Credits Management</h2>
+        <p class="text-muted">Monitor and manage API key credits and usage</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Credit Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-key fa-2x mb-2"></i>
+                <h3>{{ total_keys }}</h3>
+                <p class="mb-0">Total API Keys</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-coins fa-2x mb-2"></i>
+                <h3>{{ total_remaining:,g }}</h3>
+                <p class="mb-0">Credits Remaining</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h3>{{ total_used:,g }}</h3>
+                <p class="mb-0">Credits Used</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card {{ 'bg-danger' if low_credit_keys|length > 0 else 'bg-info' }} text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <h3>{{ low_credit_keys|length }}</h3>
+                <p class="mb-0">Low Credit Alerts</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Credit Alerts -->
+{% if low_credit_keys %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-danger">
+            <h5><i class="fas fa-exclamation-triangle"></i> Low Credit Warning</h5>
+            <p><strong>{{ low_credit_keys|length }} API key(s)</strong> have less than 500 credits remaining:</p>
+            <ul>
+                {% for key in low_credit_keys %}
+                <li><strong>{{ key.key_name }}</strong>: {{ key.remaining_credits }} credits remaining ({{ "%.1f"|format(key.credits_percentage) }}%)</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- API Keys Credit Details -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list"></i> API Key Credits (Sorted by Priority)</h5>
+                <small class="text-muted">Higher priority keys are used first</small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Key Name</th>
+                                <th>Status</th>
+                                <th>Credits</th>
+                                <th>Usage</th>
+                                <th>Priority Score</th>
+                                <th>Last Used</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for key in api_keys %}
+                            <tr class="{{ 'table-danger' if key.is_low_credits and key.status.value == 'ACTIVE' else '' }}">
+                                <td>
+                                    <strong>{{ key.key_name }}</strong>
+                                    {% if key.is_low_credits and key.status.value == 'ACTIVE' %}
+                                        <span class="badge bg-danger ms-2">LOW CREDITS</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if key.status.value == 'ACTIVE' %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% elif key.status.value == 'INACTIVE' %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="progress mb-1" style="height: 20px;">
+                                        <div class="progress-bar {{ 'bg-danger' if key.credits_percentage < 20 else 'bg-warning' if key.credits_percentage < 50 else 'bg-success' }}" 
+                                             style="width: {{ key.credits_percentage }}%">
+                                            {{ "%.1f"|format(key.credits_percentage) }}%
+                                        </div>
+                                    </div>
+                                    <small>{{ key.remaining_credits:,g }} / {{ key.total_credits:,g }}</small>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>Used:</strong> {{ key.credits_used:,g }}<br>
+                                        <strong>Errors:</strong> {{ key.error_count }}<br>
+                                        <small class="text-muted">Total requests: {{ key.usage_count }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ "%.0f"|format(key.priority_score) }}</span>
+                                    {% if key in sorted_keys[:3] %}
+                                        <small class="text-success d-block">High Priority</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if key.last_used %}
+                                        <small>{{ key.last_used.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    {% else %}
+                                        <small class="text-muted">Never used</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('update_api_credits', key_id=key.id) }}" class="d-inline">
+                                        <div class="input-group input-group-sm" style="width: 120px;">
+                                            <input type="number" class="form-control" name="total_credits" 
+                                                   value="{{ key.total_credits }}" min="0" max="1000000">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Credit Usage Tips -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-lightbulb"></i> Credit Management Tips</h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li><strong>Monitor regularly</strong> - Check credits weekly</li>
+                    <li><strong>Set up alerts</strong> - Get notified below 500 credits</li>
+                    <li><strong>Distribute load</strong> - Use multiple keys for better performance</li>
+                    <li><strong>Track patterns</strong> - Monitor usage spikes and plan accordingly</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-cog"></i> Smart Rotation</h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li><strong>Priority-based</strong> - Keys with more credits used first</li>
+                    <li><strong>Load balancing</strong> - Recent usage affects priority</li>
+                    <li><strong>Error handling</strong> - Failed keys automatically disabled</li>
+                    <li><strong>Automatic failover</strong> - Seamless switching between keys</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

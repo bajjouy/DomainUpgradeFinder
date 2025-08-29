@@ -40,6 +40,10 @@
                 {% if current_user.is_authenticated %}
                     {% if current_user.role.value == 'admin' %}
                         <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+                        <a class="nav-link" href="{{ url_for('search') }}">Search</a>
+                        <span class="nav-link">
+                            <span class="badge coin-badge bg-success">∞ Unlimited Coins</span>
+                        </span>
                     {% else %}
                         <a class="nav-link" href="{{ url_for('client_dashboard') }}">Dashboard</a>
                         <a class="nav-link" href="{{ url_for('search') }}">Search</a>

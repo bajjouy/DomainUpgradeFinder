@@ -16,8 +16,10 @@ class APIRotationManager:
         self._rate_limit_delay = 0.2  # Delay between batches in seconds
     
     def get_active_api_keys(self) -> List[APIKey]:
-        """Get all active API keys ordered by usage count (least used first)"""
-        return APIKey.query.filter_by(status=APIKeyStatus.ACTIVE).order_by(APIKey.usage_count.asc()).all()
+        """Get all active API keys ordered by priority (highest credits first)"""
+        active_keys = APIKey.query.filter_by(status=APIKeyStatus.ACTIVE).all()
+        # Sort by priority score (highest first) - this prioritizes keys with more credits
+        return sorted(active_keys, key=lambda k: k.priority_score, reverse=True)
     
     def get_next_api_key(self) -> Optional[APIKey]:
         """Get the next API key to use (round-robin with failover)"""

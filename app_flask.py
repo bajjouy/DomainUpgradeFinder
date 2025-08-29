@@ -87,6 +87,13 @@ def create_app():
         if request.method == 'POST':
             email = request.form.get('email')
             password = request.form.get('password')
+            captcha = request.form.get('captcha', '').upper()
+            captcha_answer = request.form.get('captcha_answer', '').upper()
+            
+            # Validate captcha first
+            if captcha != captcha_answer:
+                flash('Invalid security code. Please try again.', 'error')
+                return render_template('login.html')
             
             user = User.query.filter_by(email=email).first()
             
@@ -148,8 +155,12 @@ def create_app():
             CoinTransaction.status == TransactionStatus.COMPLETED
         ).scalar() or 0
         
-        # Get API key stats
+        # Get API key stats with credit monitoring
         api_keys = APIKey.query.all()
+        low_credit_keys = [k for k in api_keys if k.is_low_credits and k.status == APIKeyStatus.ACTIVE]
+        total_credits = sum(k.total_credits for k in api_keys if k.status == APIKeyStatus.ACTIVE)
+        total_used = sum(k.credits_used for k in api_keys if k.status == APIKeyStatus.ACTIVE)
+        total_remaining = total_credits - total_used
         
         # Recent activity
         recent_searches = SearchHistory.query.order_by(SearchHistory.created_at.desc()).limit(10).all()
@@ -160,8 +171,50 @@ def create_app():
                              total_searches=total_searches,
                              total_revenue=total_revenue,
                              api_keys=api_keys,
+                             low_credit_keys=low_credit_keys,
+                             total_credits=total_credits,
+                             total_used=total_used,
+                             total_remaining=total_remaining,
                              recent_searches=recent_searches,
                              recent_users=recent_users)
+    
+    @app.route('/admin/api-credits')
+    @admin_required
+    def admin_api_credits():
+        api_keys = APIKey.query.all()
+        
+        # Calculate summary statistics
+        total_keys = len(api_keys)
+        active_keys = [k for k in api_keys if k.status == APIKeyStatus.ACTIVE]
+        low_credit_keys = [k for k in active_keys if k.is_low_credits]
+        
+        total_credits = sum(k.total_credits for k in active_keys)
+        total_used = sum(k.credits_used for k in active_keys)
+        total_remaining = total_credits - total_used
+        
+        # Sort keys by priority (highest credits first)
+        sorted_keys = sorted(active_keys, key=lambda k: k.priority_score, reverse=True)
+        
+        return render_template('admin/api_credits.html',
+                             api_keys=api_keys,
+                             sorted_keys=sorted_keys,
+                             low_credit_keys=low_credit_keys,
+                             total_keys=total_keys,
+                             total_credits=total_credits,
+                             total_used=total_used,
+                             total_remaining=total_remaining)
+    
+    @app.route('/admin/api-credits/<int:key_id>/update', methods=['POST'])
+    @admin_required
+    def update_api_credits(key_id):
+        api_key = APIKey.query.get_or_404(key_id)
+        new_total = int(request.form.get('total_credits', api_key.total_credits))
+        
+        api_key.total_credits = new_total
+        db.session.commit()
+        
+        flash(f'Credits updated for {api_key.key_name}', 'success')
+        return redirect(url_for('admin_api_credits'))
     
     @app.route('/admin/api-keys')
     @admin_required
@@ -176,10 +229,13 @@ def create_app():
         key_value = request.form.get('key_value')
         daily_limit = int(request.form.get('daily_limit', 2500))
         
+        total_credits = int(request.form.get('total_credits', 2500))
+        
         api_key = APIKey()
         api_key.key_name = key_name
         api_key.key_value = key_value
         api_key.daily_limit = daily_limit
+        api_key.total_credits = total_credits
         api_key.status = APIKeyStatus.ACTIVE
         
         db.session.add(api_key)

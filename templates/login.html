@@ -19,6 +19,24 @@
                         <label for="password" class="form-label">Password</label>
                         <input type="password" class="form-control" id="password" name="password" required>
                     </div>
+                    
+                    <!-- Simple Captcha -->
+                    <div class="mb-3">
+                        <label class="form-label">Security Check</label>
+                        <div class="row">
+                            <div class="col-8">
+                                <div class="bg-light p-2 text-center border rounded" id="captcha-display" style="font-size: 20px; font-weight: bold; letter-spacing: 3px;"></div>
+                            </div>
+                            <div class="col-4">
+                                <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="generateCaptcha()">
+                                    <i class="fas fa-sync"></i> New
+                                </button>
+                            </div>
+                        </div>
+                        <input type="text" class="form-control mt-2" id="captcha" name="captcha" placeholder="Enter the code above" required>
+                        <input type="hidden" id="captcha-answer" name="captcha_answer">
+                    </div>
+                    
                     <button type="submit" class="btn btn-primary w-100">Login</button>
                 </form>
                 
@@ -30,4 +48,23 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function generateCaptcha() {
+    const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ123456789'; // Exclude confusing chars like O, 0, I, 1
+    let captcha = '';
+    for (let i = 0; i < 6; i++) {
+        captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('captcha-display').textContent = captcha;
+    document.getElementById('captcha-answer').value = captcha;
+}
+
+// Generate initial captcha on page load
+document.addEventListener('DOMContentLoaded', function() {
+    generateCaptcha();
+});
+</script>
 {% endblock %}
