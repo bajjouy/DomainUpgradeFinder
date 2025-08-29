@@ -619,14 +619,19 @@ def create_app():
         recent_transactions = CoinTransaction.query.filter_by(user_id=current_user.id).order_by(
             CoinTransaction.created_at.desc()).limit(5).all()
         
-        # Get all user's searches to calculate upkeywords
-        all_searches = SearchHistory.query.filter_by(user_id=current_user.id).all()
+        # Get user's searches from last 24 hours to calculate upkeywords
+        from datetime import timedelta
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        recent_searches = SearchHistory.query.filter(
+            SearchHistory.user_id == current_user.id,
+            SearchHistory.created_at >= twenty_four_hours_ago
+        ).all()
         
         # Calculate upkeywords (keywords with at least 1 upgrade)
         upkeywords_dict = {}
         total_upgrades = 0
         
-        for search in all_searches:
+        for search in recent_searches:
             results = search.get_results()
             if results:
                 keyword = search.keywords
@@ -676,7 +681,6 @@ def create_app():
         return render_template('client/dashboard.html',
                              user=current_user,
                              recent_searches=recent_searches,
-                             recent_transactions=recent_transactions,
                              total_upgrades=total_upgrades,
                              upkeywords=upkeywords)
     

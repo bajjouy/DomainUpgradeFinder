@@ -48,10 +48,10 @@
 </div>
 
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-star"></i> Keywords with Upgrades</h5>
+                <h5><i class="fas fa-star"></i> Keywords with Upgrades (Last 24 Hours)</h5>
             </div>
             <div class="card-body">
                 {% if upkeywords %}
@@ -80,35 +80,5 @@
         </div>
     </div>
     
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-coins"></i> Account Activity</h5>
-            </div>
-            <div class="card-body">
-                {% if recent_transactions %}
-                    {% for transaction in recent_transactions %}
-                    <div class="d-flex justify-content-between border-bottom mb-2 pb-2">
-                        <div>
-                            <strong>{% if transaction.transaction_type == 'search' %}Search{% elif transaction.transaction_type == 'stripe_payment' %}Payment{% elif transaction.transaction_type == 'manual_payment' %}Manual Payment{% else %}{{ transaction.transaction_type.replace('_', ' ').title() }}{% endif %}</strong>
-                            {% if transaction.status.value == 'PENDING' %}
-                                <span class="badge bg-warning ms-1">Pending</span>
-                            {% elif transaction.status.value == 'FAILED' %}
-                                <span class="badge bg-danger ms-1">Failed</span>
-                            {% endif %}
-                        </div>
-                        <div class="text-end">
-                            <span class="badge bg-{{ 'success' if transaction.amount > 0 and transaction.status.value == 'COMPLETED' else 'warning' if transaction.status.value == 'PENDING' else 'danger' }}">
-                                {{ '+' if transaction.amount > 0 else '' }}{{ transaction.amount }}
-                            </span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted">No recent activity.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
