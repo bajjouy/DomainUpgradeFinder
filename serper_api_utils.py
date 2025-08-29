@@ -24,10 +24,12 @@ def check_serper_credits(api_key: str) -> Dict:
         
         if response.status_code == 200:
             data = response.json()
+            # Serper API returns 'balance' instead of 'credits_left'
+            balance = data.get('balance', 0)
             return {
-                'credits_left': data.get('credits_left', 0),
-                'total_credits': data.get('total_credits', 0),
-                'plan': data.get('plan', 'Unknown'),
+                'credits_left': balance,
+                'total_credits': balance + 1000,  # Estimate total (free plan is 2500, could be more)
+                'plan': 'Serper Free' if balance <= 2500 else 'Serper Paid',
                 'error': None
             }
         else:
