@@ -426,6 +426,99 @@ def create_app():
         
         return redirect(url_for('client_dashboard'))
     
+    # Manual Payment Routes
+    @app.route('/request-manual-payment', methods=['POST'])
+    @client_required
+    def request_manual_payment():
+        package_id = request.form.get('package_id')
+        payment_method = request.form.get('payment_method')
+        payment_notes = request.form.get('payment_notes')
+        
+        package = PricingPackage.query.get_or_404(package_id)
+        
+        # Create pending transaction
+        transaction = CoinTransaction()
+        transaction.user_id = current_user.id
+        transaction.amount = package.coins
+        transaction.transaction_type = 'manual_payment'
+        transaction.status = TransactionStatus.PENDING
+        transaction.payment_method = payment_method
+        transaction.payment_notes = payment_notes
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        flash(f'Payment request submitted! You will receive {package.coins} coins after admin approval.', 'info')
+        return redirect(url_for('client_dashboard'))
+    
+    # Admin Payment Management Routes
+    @app.route('/admin/payments')
+    @admin_required
+    def admin_payments():
+        # Get all pending manual payments
+        pending_payments = CoinTransaction.query.filter_by(
+            transaction_type='manual_payment',
+            status=TransactionStatus.PENDING
+        ).order_by(CoinTransaction.created_at.desc()).all()
+        
+        # Get recent processed payments
+        processed_payments = CoinTransaction.query.filter_by(
+            transaction_type='manual_payment'
+        ).filter(
+            CoinTransaction.status.in_([TransactionStatus.COMPLETED, TransactionStatus.FAILED])
+        ).order_by(CoinTransaction.processed_at.desc()).limit(20).all()
+        
+        return render_template('admin/payments.html', 
+                             pending_payments=pending_payments,
+                             processed_payments=processed_payments)
+    
+    @app.route('/admin/payments/<int:transaction_id>/approve', methods=['POST'])
+    @admin_required
+    def approve_payment(transaction_id):
+        transaction = CoinTransaction.query.get_or_404(transaction_id)
+        admin_notes = request.form.get('admin_notes', '')
+        
+        if transaction.status != TransactionStatus.PENDING:
+            flash('Transaction has already been processed.', 'error')
+            return redirect(url_for('admin_payments'))
+        
+        # Approve the payment
+        transaction.status = TransactionStatus.COMPLETED
+        transaction.processed_by = current_user.id
+        transaction.processed_at = datetime.utcnow()
+        transaction.admin_notes = admin_notes
+        
+        # Add coins to user account
+        user = User.query.get(transaction.user_id)
+        user.coins += transaction.amount
+        
+        db.session.commit()
+        
+        flash(f'Payment approved! {transaction.amount} coins added to {user.email}', 'success')
+        return redirect(url_for('admin_payments'))
+    
+    @app.route('/admin/payments/<int:transaction_id>/reject', methods=['POST'])
+    @admin_required
+    def reject_payment(transaction_id):
+        transaction = CoinTransaction.query.get_or_404(transaction_id)
+        admin_notes = request.form.get('admin_notes', '')
+        
+        if transaction.status != TransactionStatus.PENDING:
+            flash('Transaction has already been processed.', 'error')
+            return redirect(url_for('admin_payments'))
+        
+        # Reject the payment
+        transaction.status = TransactionStatus.FAILED
+        transaction.processed_by = current_user.id
+        transaction.processed_at = datetime.utcnow()
+        transaction.admin_notes = admin_notes
+        
+        db.session.commit()
+        
+        user = User.query.get(transaction.user_id)
+        flash(f'Payment rejected for {user.email}. Reason: {admin_notes or "No reason provided"}', 'warning')
+        return redirect(url_for('admin_payments'))
+    
     return app
 
 if __name__ == '__main__':

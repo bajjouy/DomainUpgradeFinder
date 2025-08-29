@@ -26,9 +26,61 @@
                 <p class="lead">{{ package.coins }} coins</p>
                 <p class="text-muted">${{ "%.3f"|format(package.price_dollars / package.coins) }} per coin</p>
                 
-                <button class="btn btn-primary w-100" onclick="buyPackage({{ package.id }}, '{{ package.name }}', {{ package.price_cents }})">
-                    Buy Now
-                </button>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="buyPackage({{ package.id }}, '{{ package.name }}', {{ package.price_cents }})">
+                        <i class="fas fa-credit-card"></i> Pay with Stripe
+                    </button>
+                    <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#manualPaymentModal{{ package.id }}">
+                        <i class="fas fa-university"></i> Manual Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Manual Payment Modal -->
+    <div class="modal fade" id="manualPaymentModal{{ package.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manual Payment Request - {{ package.name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('request_manual_payment') }}">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <strong>{{ package.coins }} coins</strong> for <strong>${{ "%.2f"|format(package.price_dollars) }}</strong>
+                        </div>
+                        
+                        <input type="hidden" name="package_id" value="{{ package.id }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Payment Method</label>
+                            <select class="form-select" name="payment_method" required>
+                                <option value="">Choose payment method...</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="paypal">PayPal</option>
+                                <option value="crypto">Cryptocurrency</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="payment_notes{{ package.id }}" class="form-label">Payment Details/Reference</label>
+                            <textarea class="form-control" id="payment_notes{{ package.id }}" name="payment_notes" rows="3" 
+                                    placeholder="Enter transaction ID, payment reference, or other details..."></textarea>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <small>Your coins will be added after admin approval. Please include payment proof or reference details.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">Submit Payment Request</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -42,8 +94,8 @@
             <ul class="mb-0">
                 <li>Each keyword search costs 1 coin</li>
                 <li>Coins never expire</li>
-                <li>Secure payments processed by Stripe</li>
-                <li>Instant coin delivery after payment</li>
+                <li><strong>Stripe:</strong> Instant automated payment processing</li>
+                <li><strong>Manual Payment:</strong> Bank transfer, PayPal, crypto - requires admin approval</li>
             </ul>
         </div>
     </div>

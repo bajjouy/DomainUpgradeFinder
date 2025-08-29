@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-credit-card"></i> Payment Management</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3>{{ pending_payments|length }}</h3>
+                <p>Pending Approvals</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3>{{ processed_payments|selectattr('status.value', 'equalto', 'COMPLETED')|list|length }}</h3>
+                <p>Recently Approved</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h3>{{ processed_payments|selectattr('status.value', 'equalto', 'FAILED')|list|length }}</h3>
+                <p>Recently Rejected</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h3>{{ (pending_payments|map(attribute='amount')|sum) or 0 }}</h3>
+                <p>Coins Pending</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Payments -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h5><i class="fas fa-clock"></i> Pending Payment Approvals</h5>
+            </div>
+            <div class="card-body">
+                {% if pending_payments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>User</th>
+                                    <th>Amount</th>
+                                    <th>Payment Method</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in pending_payments %}
+                                <tr>
+                                    <td>{{ payment.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <strong>{{ payment.user.email }}</strong><br>
+                                        <small class="text-muted">Current: {{ payment.user.coins }} coins</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ payment.amount }} coins</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ payment.payment_method.replace('_', ' ').title() }}</span>
+                                    </td>
+                                    <td>
+                                        {% if payment.payment_notes %}
+                                            <small>{{ payment.payment_notes[:100] }}...</small>
+                                        {% else %}
+                                            <small class="text-muted">No notes</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ payment.id }}">
+                                            <i class="fas fa-check"></i> Approve
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ payment.id }}">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Approve Modal -->
+                                <div class="modal fade" id="approveModal{{ payment.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-success text-white">
+                                                <h5 class="modal-title">Approve Payment</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('approve_payment', transaction_id=payment.id) }}">
+                                                <div class="modal-body">
+                                                    <div class="alert alert-info">
+                                                        <strong>User:</strong> {{ payment.user.email }}<br>
+                                                        <strong>Amount:</strong> {{ payment.amount }} coins<br>
+                                                        <strong>Method:</strong> {{ payment.payment_method.replace('_', ' ').title() }}<br>
+                                                        <strong>User Notes:</strong> {{ payment.payment_notes or 'None' }}
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Admin Notes (Optional)</label>
+                                                        <textarea class="form-control" name="admin_notes" rows="3" 
+                                                                placeholder="Add any notes about this approval..."></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" class="btn btn-success">Approve Payment</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Reject Modal -->
+                                <div class="modal fade" id="rejectModal{{ payment.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title">Reject Payment</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('reject_payment', transaction_id=payment.id) }}">
+                                                <div class="modal-body">
+                                                    <div class="alert alert-warning">
+                                                        <strong>User:</strong> {{ payment.user.email }}<br>
+                                                        <strong>Amount:</strong> {{ payment.amount }} coins<br>
+                                                        <strong>Method:</strong> {{ payment.payment_method.replace('_', ' ').title() }}<br>
+                                                        <strong>User Notes:</strong> {{ payment.payment_notes or 'None' }}
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Rejection Reason</label>
+                                                        <textarea class="form-control" name="admin_notes" rows="3" required
+                                                                placeholder="Please provide a reason for rejection..."></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" class="btn btn-danger">Reject Payment</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5>No Pending Payments</h5>
+                        <p class="text-muted">All manual payments have been processed.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Processed Payments -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Recently Processed Payments</h5>
+            </div>
+            <div class="card-body">
+                {% if processed_payments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Processed</th>
+                                    <th>User</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Processed By</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in processed_payments %}
+                                <tr class="{{ 'table-success' if payment.status.value == 'COMPLETED' else 'table-danger' }}">
+                                    <td>{{ payment.processed_at.strftime('%Y-%m-%d %H:%M') if payment.processed_at else 'N/A' }}</td>
+                                    <td>{{ payment.user.email }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ payment.amount }} coins</span>
+                                    </td>
+                                    <td>{{ payment.payment_method.replace('_', ' ').title() if payment.payment_method else 'N/A' }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if payment.status.value == 'COMPLETED' else 'danger' }}">
+                                            {{ payment.status.value }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if payment.processed_by_admin %}
+                                            {{ payment.processed_by_admin.email }}
+                                        {% else %}
+                                            <span class="text-muted">System</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if payment.admin_notes %}
+                                            <small>{{ payment.admin_notes[:50] }}...</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No processed payments yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -36,7 +36,8 @@ class User(UserMixin, db.Model):
     trial_coins_used = db.Column(db.Boolean, default=False)
     
     # Relationships
-    transactions = db.relationship('CoinTransaction', backref='user', lazy=True)
+    transactions = db.relationship('CoinTransaction', foreign_keys='CoinTransaction.user_id', backref='user', lazy=True)
+    processed_transactions = db.relationship('CoinTransaction', foreign_keys='CoinTransaction.processed_by', backref='processed_by_admin', lazy=True)
     searches = db.relationship('SearchHistory', backref='user', lazy=True)
     
     def __repr__(self):
@@ -93,9 +94,14 @@ class CoinTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     amount = db.Column(db.Integer, nullable=False)  # Positive for purchase, negative for usage
-    transaction_type = db.Column(db.String(50), nullable=False)  # purchase, search, refund, admin_adjustment
+    transaction_type = db.Column(db.String(50), nullable=False)  # purchase, search, refund, admin_adjustment, manual_payment
     status = db.Column(db.Enum(TransactionStatus), default=TransactionStatus.PENDING)
     stripe_payment_id = db.Column(db.String(200))
+    payment_method = db.Column(db.String(50))  # stripe, bank_transfer, paypal, crypto, other
+    payment_notes = db.Column(db.Text)  # Payment reference, transaction ID, etc.
+    admin_notes = db.Column(db.Text)  # Admin notes for approval/rejection
+    processed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Admin who processed
+    processed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):

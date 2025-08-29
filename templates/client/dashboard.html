@@ -81,11 +81,17 @@
                     {% for transaction in recent_transactions %}
                     <div class="d-flex justify-content-between border-bottom mb-2 pb-2">
                         <div>
-                            <strong>{{ transaction.transaction_type.replace('_', ' ').title() }}</strong><br>
+                            <strong>{{ transaction.transaction_type.replace('_', ' ').title() }}</strong>
+                            {% if transaction.transaction_type == 'manual_payment' and transaction.status.value == 'PENDING' %}
+                                <span class="badge bg-warning ms-1">Pending Approval</span>
+                            {% elif transaction.transaction_type == 'manual_payment' and transaction.status.value == 'FAILED' %}
+                                <span class="badge bg-danger ms-1">Rejected</span>
+                            {% endif %}
+                            <br>
                             <small class="text-muted">{{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                         </div>
                         <div class="text-end">
-                            <span class="badge bg-{{ 'success' if transaction.amount > 0 else 'danger' }}">
+                            <span class="badge bg-{{ 'success' if transaction.amount > 0 and transaction.status.value == 'COMPLETED' else 'warning' if transaction.status.value == 'PENDING' else 'danger' }}">
                                 {{ '+' if transaction.amount > 0 else '' }}{{ transaction.amount }}
                             </span>
                         </div>
