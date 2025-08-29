@@ -156,32 +156,7 @@
 {% endif %}
 
 <script>
-document.getElementById('searchBtn')?.addEventListener('click', function(e) {
-    const form = this.closest('form');
-    const keywords = form.querySelector('#keywords').value.trim();
-    
-    if (!keywords) return;
-    
-    // Count keyword sets
-    const keywordSets = keywords.split('\n').filter(line => line.trim());
-    const totalKeywords = keywordSets.length;
-    
-    // Show progress section
-    document.getElementById('progressSection').style.display = 'block';
-    
-    // Disable the search button
-    this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
-    
-    // Update progress display
-    const progressText = document.getElementById('progressText');
-    const currentKeyword = document.getElementById('currentKeyword');
-    
-    progressText.textContent = `Processing ${totalKeywords} keyword set${totalKeywords > 1 ? 's' : ''}...`;
-    currentKeyword.textContent = 'Starting search...';
-    
-    // Let the form submit naturally - no fake progress simulation
-});
+// Remove the problematic JavaScript that's interfering with form submission
 </script>
 
 {% endblock %}
