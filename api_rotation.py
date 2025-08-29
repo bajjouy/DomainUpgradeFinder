@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 import time
 import json
 from typing import List, Dict, Optional, Tuple
-from models import APIKey, SystemLog, db
+from models import APIKey, SystemLog, APIKeyStatus, db
 from datetime import datetime, timedelta
 import logging
 
@@ -15,7 +15,7 @@ class APIRotationManager:
     
     def get_active_api_keys(self) -> List[APIKey]:
         """Get all active API keys ordered by usage count (least used first)"""
-        return APIKey.query.filter_by(status='active').order_by(APIKey.usage_count.asc()).all()
+        return APIKey.query.filter_by(status=APIKeyStatus.ACTIVE).order_by(APIKey.usage_count.asc()).all()
     
     def get_next_api_key(self) -> Optional[APIKey]:
         """Get the next API key to use (round-robin with failover)"""
@@ -77,7 +77,7 @@ class APIRotationManager:
                 
                 # Check if we should deactivate this key
                 if self._should_deactivate_key(api_key, str(e)):
-                    api_key.status = 'failed'
+                    api_key.status = APIKeyStatus.FAILED
                     self._log_system("warning", f"Deactivated API key {api_key.key_name}: {str(e)}")
                 
                 db.session.commit()
