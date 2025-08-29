@@ -513,32 +513,65 @@ def create_app():
     
     @app.route('/download/<format>')
     @client_required
-    def download_results(format):
-        # Get results from the most recent search
+    def download_results(format, session_id=None):
+        # Get results from the most recent search or specific session
         search_id = session.get('latest_search_id')
-        if not search_id:
-            flash('No recent search results to download', 'error')
-            return redirect(url_for('search'))
+        if not session_id:
+            session_id = request.args.get('session_id')
         
-        # Get all results from recent searches for this user
-        recent_searches = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
-            SearchHistory.created_at.desc()).limit(10).all()
+        if session_id:
+            # Download from specific search session (for bulk searches)
+            search_session = SearchSession.query.filter_by(
+                id=session_id, user_id=current_user.id).first()
+            if not search_session:
+                flash('Search session not found', 'error')
+                return redirect(url_for('client_dashboard'))
+            
+            # Get ALL search history entries for this session
+            recent_searches = SearchHistory.query.filter_by(
+                session_id=session_id, user_id=current_user.id).all()
+        else:
+            # Get from latest search
+            if not search_id:
+                flash('No recent search results to download', 'error')
+                return redirect(url_for('search'))
+            
+            recent_searches = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
+                SearchHistory.created_at.desc()).limit(10).all()
         
+        # Compile ALL results (including non-upgrade opportunities)
         results = []
         for search in recent_searches:
             search_results = search.get_results()
             if search_results:
+                # Add the Keywords column (original search keywords)
+                for result in search_results:
+                    result['Keywords'] = search.keywords
                 results.extend(search_results)
         
         if not results:
             flash('No search results to download', 'error')
             return redirect(url_for('search'))
         
+        # Create DataFrame with exact column structure as requested
         df = pd.DataFrame(results)
+        
+        # Ensure exact column order and names as specified: 
+        # "Keywords     Competitor_Domain       Search_Keywords Matched_Keywords        Match_Count     Total_Keywords  Is_Upgrade      Google_Rank     Competitor_Title"
+        required_columns = [
+            'Keywords', 'Competitor_Domain', 'Search_Keywords', 
+            'Matched_Keywords', 'Match_Count', 'Total_Keywords', 
+            'Is_Upgrade', 'Google_Rank', 'Competitor_Title'
+        ]
+        
+        # Select only existing columns in the correct order
+        existing_columns = [col for col in required_columns if col in df.columns]
+        df = df[existing_columns]
         
         if format == 'csv':
             csv_buffer = io.StringIO()
-            df.to_csv(csv_buffer, index=False)
+            # Use tab separator to match the original format shown by user
+            df.to_csv(csv_buffer, index=False, sep='\t')
             csv_data = csv_buffer.getvalue()
             
             return Response(
@@ -550,7 +583,7 @@ def create_app():
         elif format == 'excel':
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-                df.to_excel(writer, sheet_name='Upgrade Opportunities', index=False)
+                df.to_excel(writer, sheet_name='All Results', index=False)
             excel_data = excel_buffer.getvalue()
             
             return Response(
@@ -558,6 +591,7 @@ def create_app():
                 mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 headers={'Content-Disposition': 'attachment; filename=keyword_upgrade_opportunities.xlsx'}
             )
+    
     
     @app.route('/history')
     @client_required
@@ -762,24 +796,42 @@ def create_app():
         search_session = SearchSession.query.filter_by(
             id=session_id, user_id=current_user.id).first_or_404()
         
-        # Get all results from this session
+        # Get ALL results from this session (including non-upgrade opportunities)
         searches = SearchHistory.query.filter_by(session_id=session_id).all()
         results = []
         for search in searches:
             search_results = search.get_results()
             if search_results:
+                # Add the Keywords column (original search keywords)  
+                for result in search_results:
+                    result['Keywords'] = search.keywords
                 results.extend(search_results)
         
         if not results:
             flash('No results to download for this search session', 'error')
             return redirect(url_for('view_search_session', session_id=session_id))
         
+        # Create DataFrame with exact column structure as requested
         df = pd.DataFrame(results)
+        
+        # Ensure exact column order and names as specified:
+        # "Keywords     Competitor_Domain       Search_Keywords Matched_Keywords        Match_Count     Total_Keywords  Is_Upgrade      Google_Rank     Competitor_Title"
+        required_columns = [
+            'Keywords', 'Competitor_Domain', 'Search_Keywords', 
+            'Matched_Keywords', 'Match_Count', 'Total_Keywords', 
+            'Is_Upgrade', 'Google_Rank', 'Competitor_Title'
+        ]
+        
+        # Select only existing columns in the correct order
+        existing_columns = [col for col in required_columns if col in df.columns]
+        df = df[existing_columns]
+        
         timestamp = search_session.created_at.strftime('%Y%m%d_%H%M%S')
         
         if format == 'csv':
             csv_buffer = io.StringIO()
-            df.to_csv(csv_buffer, index=False)
+            # Use tab separator to match the original format shown by user
+            df.to_csv(csv_buffer, index=False, sep='\t')
             csv_data = csv_buffer.getvalue()
             
             return Response(
@@ -791,7 +843,7 @@ def create_app():
         elif format == 'excel':
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-                df.to_excel(writer, sheet_name='Search Results', index=False)
+                df.to_excel(writer, sheet_name='All Results', index=False)
             excel_data = excel_buffer.getvalue()
             
             return Response(

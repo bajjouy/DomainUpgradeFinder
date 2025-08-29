@@ -97,11 +97,13 @@
             <div class="card-header d-flex justify-content-between">
                 <h5><i class="fas fa-chart-line"></i> Upgrade Opportunities ({{ upgrade_count }} found, {{ total_results }} total results)</h5>
                 <div>
-                    <a href="{{ url_for('download_results', format='csv') }}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-download"></i> CSV
+                    <a href="{{ url_for('download_results', format='csv') }}" class="btn btn-outline-primary btn-sm" 
+                       title="Download all {{ total_results }} results including partial matches">
+                        <i class="fas fa-download"></i> All Results CSV
                     </a>
-                    <a href="{{ url_for('download_results', format='excel') }}" class="btn btn-outline-success btn-sm">
-                        <i class="fas fa-download"></i> Excel
+                    <a href="{{ url_for('download_results', format='excel') }}" class="btn btn-outline-success btn-sm"
+                       title="Download all {{ total_results }} results including partial matches">
+                        <i class="fas fa-download"></i> All Results Excel
                     </a>
                 </div>
             </div>
@@ -146,13 +148,22 @@
                     <i class="fas fa-info-circle"></i>
                     <strong>No perfect upgrade opportunities found.</strong> 
                     We found {{ total_results }} potential matches, but none were clear upgrade opportunities. 
-                    You can download the full results to review partial matches.
+                    <strong>Download the full results to review all matches with detailed data.</strong>
                 </div>
                 {% elif total_results == 0 %}
                 <div class="alert alert-warning mt-3">
                     <i class="fas fa-exclamation-triangle"></i>
                     <strong>No results found.</strong> 
                     Try different keywords or check your spelling. The search completed successfully but didn't find any matches.
+                </div>
+                {% endif %}
+                
+                {% if total_results > 0 %}
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> Dashboard shows only upgrade opportunities. Downloads include all {{ total_results }} results with complete data in the format: Keywords, Competitor_Domain, Search_Keywords, Matched_Keywords, Match_Count, Total_Keywords, Is_Upgrade, Google_Rank, Competitor_Title.
+                    </small>
                 </div>
                 {% endif %}
             </div>
