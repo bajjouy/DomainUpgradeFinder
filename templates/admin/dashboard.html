@@ -61,7 +61,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4>{{ total_remaining:,g }}</h4>
+                        <h4>{{ "{:,.0f}".format(total_remaining) }}</h4>
                         <span>Credits Remaining</span>
                         {% if low_credit_keys|length > 0 %}
                             <small class="d-block">⚠️ {{ low_credit_keys|length }} low credit alerts</small>
