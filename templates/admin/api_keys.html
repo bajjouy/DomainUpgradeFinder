@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}API Key Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-key"></i> API Key Management</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Add New API Key</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_api_key') }}">
+                    <div class="mb-3">
+                        <label for="key_name" class="form-label">Key Name</label>
+                        <input type="text" class="form-control" id="key_name" name="key_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="key_value" class="form-label">API Key</label>
+                        <input type="password" class="form-control" id="key_value" name="key_value" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="daily_limit" class="form-label">Daily Limit</label>
+                        <input type="number" class="form-control" id="daily_limit" name="daily_limit" value="2500">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add API Key</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>API Key Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'active')|list|length }}</h4>
+                        <small class="text-success">Active</small>
+                    </div>
+                    <div class="col-4">
+                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'inactive')|list|length }}</h4>
+                        <small class="text-warning">Inactive</small>
+                    </div>
+                    <div class="col-4">
+                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'failed')|list|length }}</h4>
+                        <small class="text-danger">Failed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Current API Keys</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Usage</th>
+                                <th>Errors</th>
+                                <th>Last Used</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for key in api_keys %}
+                            <tr>
+                                <td>{{ key.key_name }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if key.status.value == 'active' else 'warning' if key.status.value == 'inactive' else 'danger' }}">
+                                        {{ key.status.value.upper() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ key.usage_count }}
+                                    <small class="text-muted">/ {{ key.daily_limit }}</small>
+                                </td>
+                                <td>
+                                    {% if key.error_count > 0 %}
+                                        <span class="text-danger">{{ key.error_count }}</span>
+                                    {% else %}
+                                        <span class="text-success">0</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if key.last_used %}
+                                        {{ key.last_used.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('toggle_api_key', key_id=key.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        {{ 'Deactivate' if key.status.value == 'active' else 'Activate' }}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

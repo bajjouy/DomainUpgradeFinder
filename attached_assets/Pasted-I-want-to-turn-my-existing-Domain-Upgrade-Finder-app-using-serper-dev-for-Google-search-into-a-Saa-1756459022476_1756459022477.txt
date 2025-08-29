@@ -1,0 +1,107 @@
+I want to turn my existing Domain Upgrade Finder app (using serper.dev for Google search) into a SaaS platform with 2 dashboards, a coin system, and an API failover/rotation system.
+
+1. Admin Dashboard (me, the owner)
+
+Features:
+
+Login for Admin (secure).
+
+Manage API Keys:
+
+Add / update / remove multiple serper.dev API keys.
+
+The system should:
+
+Use API keys in round-robin rotation (balance usage across all).
+
+If one API fails (rate limit, quota exceeded, timeout, error) → automatically switch to the next API key.
+
+If all keys fail → return error message + log the failure.
+
+Manage Pricing Packages:
+
+Create coin packages (e.g., 100 coins = $10, 500 coins = $40).
+
+Coins = credits that users spend when using the tool.
+
+User Management:
+
+View all registered users.
+
+See their remaining coins.
+
+Option to add or remove coins manually.
+
+Usage Analytics:
+
+Track total searches made.
+
+Track per-user usage.
+
+Show API key usage stats (per key requests, errors, last used).
+
+2. Client Dashboard (for customers)
+
+Features:
+
+User Registration & Login.
+
+Buy Coins:
+
+Integrated with Stripe / PayPal.
+
+After payment, coins are added to account.
+
+Keyword Check Tool (the core app):
+
+Upload/paste domain list.
+
+Each keyword search = 1 coin deducted.
+
+If out of coins → block search + show “Buy More Coins.”
+
+Results:
+
+Show upgrade matches.
+
+Option to download CSV/Excel.
+
+History:
+
+Show previous searches & results.
+
+Account Page:
+
+Show remaining coins.
+
+Show purchase history.
+
+3. API Failover System (Important)
+
+Admin can add multiple API keys.
+
+System works like this:
+
+Start with API key #1.
+
+If request succeeds → continue.
+
+If request fails (rate limit / quota / invalid key / timeout) → automatically retry with the next API key.
+
+Continue until success or all keys exhausted.
+
+Logs should record:
+
+Which API key was used.
+
+If failover occurred.
+
+Total requests per API key (to monitor usage).
+
+4. System Rules
+
+1 keyword search = 1 coin.
+
+If no coins available → block usage until recharge.
+
+Optional: free trial coins for new users.

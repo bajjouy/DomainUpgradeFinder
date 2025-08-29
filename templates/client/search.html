@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Search - Domain Upgrade Finder{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-search"></i> Keyword Search</h2>
+        <p class="text-muted">Enter keywords to find businesses that could upgrade to premium domains. Each search costs 1 coin.</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Search Keywords</h5>
+                <small class="text-muted">You have {{ current_user.coins }} coins available</small>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="keywords" class="form-label">Keywords (one set per line)</label>
+                        <textarea class="form-control" id="keywords" name="keywords" rows="8" 
+                                placeholder="houston plumber&#10;affordable concrete services&#10;best lawyer firm" required></textarea>
+                        <div class="form-text">Each line represents one search (1 coin each)</div>
+                    </div>
+                    
+                    {% if current_user.coins > 0 %}
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Start Search
+                    </button>
+                    {% else %}
+                    <a href="{{ url_for('buy_coins') }}" class="btn btn-warning w-100">
+                        <i class="fas fa-coins"></i> Buy Coins to Search
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>How it works</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>Enter Keywords:</strong> Type relevant business keywords, one set per line</li>
+                    <li><strong>Search Google:</strong> We search Google for businesses using those exact keywords</li>
+                    <li><strong>Find Matches:</strong> Identify domains that contain your keywords</li>
+                    <li><strong>Upgrade Opportunities:</strong> Discover businesses that could upgrade to premium domains</li>
+                </ol>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Example:</strong> If you search "houston plumber", we might find "plumbersinhouston.net" - a business that could upgrade to "houstonplumber.com"
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if show_results and results %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h5><i class="fas fa-chart-line"></i> Search Results ({{ results|length }} opportunities found)</h5>
+                <div>
+                    <a href="{{ url_for('download_results', format='csv') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-download"></i> CSV
+                    </a>
+                    <a href="{{ url_for('download_results', format='excel') }}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-download"></i> Excel
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Keywords</th>
+                                <th>Competitor Domain</th>
+                                <th>Matched Keywords</th>
+                                <th>Match Score</th>
+                                <th>Google Rank</th>
+                                <th>Upgrade?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                            <tr class="{{ 'table-success' if result.Is_Upgrade else '' }}">
+                                <td>{{ result.Keywords }}</td>
+                                <td>
+                                    <a href="http://{{ result.Competitor_Domain }}" target="_blank">
+                                        {{ result.Competitor_Domain }}
+                                    </a>
+                                </td>
+                                <td>{{ result.Matched_Keywords }}</td>
+                                <td>{{ result.Match_Count }}/{{ result.Total_Keywords }}</td>
+                                <td>{{ result.Google_Rank }}</td>
+                                <td>
+                                    {% if result.Is_Upgrade %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Partial</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

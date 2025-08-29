@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Buy Coins{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-coins"></i> Buy Coins</h2>
+        <p class="text-muted">Purchase coins to perform searches. Each search costs 1 coin.</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    {% for package in packages %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 {{ 'border-warning' if loop.index == 2 else '' }}">
+            {% if loop.index == 2 %}
+            <div class="card-header bg-warning text-center">
+                <small>MOST POPULAR</small>
+            </div>
+            {% endif %}
+            <div class="card-body text-center">
+                <h4>{{ package.name }}</h4>
+                <div class="display-4 text-primary">${{ "%.2f"|format(package.price_dollars) }}</div>
+                <p class="lead">{{ package.coins }} coins</p>
+                <p class="text-muted">${{ "%.3f"|format(package.price_dollars / package.coins) }} per coin</p>
+                
+                <button class="btn btn-primary w-100" onclick="buyPackage({{ package.id }}, '{{ package.name }}', {{ package.price_cents }})">
+                    Buy Now
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8 mx-auto">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> About Our Coin System</h5>
+            <ul class="mb-0">
+                <li>Each keyword search costs 1 coin</li>
+                <li>Coins never expire</li>
+                <li>Secure payments processed by Stripe</li>
+                <li>Instant coin delivery after payment</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+const stripe = Stripe('{{ stripe_public_key }}');
+
+function buyPackage(packageId, packageName, priceInCents) {
+    // Create payment intent
+    fetch('/create-payment-intent', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            package_id: packageId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+        
+        // Confirm payment
+        return stripe.confirmCardPayment(data.client_secret, {
+            payment_method: {
+                card: {
+                    // This would need a proper card element in production
+                    // For demo purposes, using test payment method
+                }
+            }
+        });
+    })
+    .then(result => {
+        if (result.error) {
+            alert('Payment failed: ' + result.error.message);
+        } else {
+            window.location.href = '/payment-success?payment_intent=' + result.paymentIntent.id;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Payment error: ' + error.message);
+    });
+}
+</script>
+{% endblock %}

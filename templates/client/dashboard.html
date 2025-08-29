@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-tachometer-alt"></i> Welcome, {{ user.email }}</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-coins fa-3x mb-2"></i>
+                <h3>{{ user.coins }}</h3>
+                <p>Coins Available</p>
+                {% if user.coins < 10 %}
+                <a href="{{ url_for('buy_coins') }}" class="btn btn-light btn-sm">Buy More Coins</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-search fa-3x mb-2"></i>
+                <h3>{{ recent_searches|length }}</h3>
+                <p>Recent Searches</p>
+                <a href="{{ url_for('search') }}" class="btn btn-light btn-sm">New Search</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-history fa-3x mb-2"></i>
+                <h3>{{ recent_transactions|length }}</h3>
+                <p>Recent Transactions</p>
+                <a href="{{ url_for('search_history') }}" class="btn btn-light btn-sm">View History</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock"></i> Recent Searches</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_searches %}
+                    {% for search in recent_searches %}
+                    <div class="border-bottom mb-2 pb-2">
+                        <strong>{{ search.keywords }}</strong><br>
+                        <small class="text-muted">
+                            {{ search.created_at.strftime('%Y-%m-%d %H:%M') }} - 
+                            {{ search.get_results()|length }} results
+                        </small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No searches yet. <a href="{{ url_for('search') }}">Start your first search!</a></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-coins"></i> Recent Transactions</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                    {% for transaction in recent_transactions %}
+                    <div class="d-flex justify-content-between border-bottom mb-2 pb-2">
+                        <div>
+                            <strong>{{ transaction.transaction_type.replace('_', ' ').title() }}</strong><br>
+                            <small class="text-muted">{{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ 'success' if transaction.amount > 0 else 'danger' }}">
+                                {{ '+' if transaction.amount > 0 else '' }}{{ transaction.amount }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No transactions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
