@@ -2,29 +2,23 @@ import requests
 import re
 from urllib.parse import urlparse
 import time
+import json
 from typing import List, Dict, Optional
 
 class DomainAnalyzer:
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = "https://serpapi.com/search"
+        self.base_url = "https://google.serper.dev/search"
     
-    def extract_keywords(self, domain: str) -> List[str]:
+    def parse_keywords(self, keywords_text: str) -> List[str]:
         """
-        Extract keywords from domain name by removing TLD and splitting into words
+        Parse keywords from text input and clean them
         """
-        # Remove TLD
-        domain_without_tld = re.sub(r'\.(com|net|org|edu|gov|mil|int|biz|info|name|pro|aero|coop|museum)$', '', domain.lower())
+        if not keywords_text:
+            return []
         
-        # Split camelCase and handle various separators
-        # First, handle camelCase by inserting spaces before uppercase letters
-        domain_spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', domain_without_tld)
-        
-        # Replace common separators with spaces
-        domain_spaced = re.sub(r'[-_.]', ' ', domain_spaced)
-        
-        # Split into words and filter out empty strings
-        keywords = [word.strip().lower() for word in domain_spaced.split() if word.strip()]
+        # Split keywords by spaces and clean them
+        keywords = [word.strip().lower() for word in keywords_text.split() if word.strip()]
         
         # Remove common words that don't add value
         stop_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
@@ -34,27 +28,31 @@ class DomainAnalyzer:
     
     def search_google(self, query: str, max_results: int = 10) -> List[Dict]:
         """
-        Search Google using SerpAPI for the given query
+        Search Google using Serper.dev API for the given query
         """
-        params = {
+        headers = {
+            'X-API-KEY': self.api_key,
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
             'q': f'"{query}"',  # Search exact phrase in quotes
-            'api_key': self.api_key,
-            'engine': 'google',
             'num': max_results,
-            'start': 0
+            'gl': 'us',
+            'hl': 'en'
         }
         
         try:
-            response = requests.get(self.base_url, params=params, timeout=30)
+            response = requests.post(self.base_url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
             
             data = response.json()
             
-            if 'error' in data:
-                raise Exception(f"SerpAPI Error: {data['error']}")
+            if 'message' in data and 'error' in data.get('message', '').lower():
+                raise Exception(f"Serper API Error: {data['message']}")
             
             results = []
-            organic_results = data.get('organic_results', [])
+            organic_results = data.get('organic', [])
             
             for i, result in enumerate(organic_results[:max_results]):
                 link = result.get('link', '')
@@ -115,13 +113,13 @@ class DomainAnalyzer:
             'is_upgrade': len(matches) == len(my_keywords) and len(matches) > 0
         }
     
-    def analyze_domain(self, domain: str, max_results: int = 10) -> List[Dict]:
+    def analyze_keywords(self, keywords_text: str, max_results: int = 10) -> List[Dict]:
         """
-        Analyze a single domain and find upgrade opportunities
+        Analyze keywords and find upgrade opportunities
         """
         try:
-            # Extract keywords
-            keywords = self.extract_keywords(domain)
+            # Parse keywords
+            keywords = self.parse_keywords(keywords_text)
             
             if not keywords:
                 return []
@@ -141,7 +139,7 @@ class DomainAnalyzer:
             for result in search_results:
                 competitor_domain = self.extract_domain_from_url(result['url'])
                 
-                if not competitor_domain or competitor_domain == domain.lower():
+                if not competitor_domain:
                     continue
                 
                 # Check keyword match
@@ -150,9 +148,9 @@ class DomainAnalyzer:
                 # Only include if there are some matches (not necessarily all for upgrade)
                 if match_result['match_count'] > 0:
                     upgrade_opportunities.append({
-                        'My_Domain': domain,
+                        'Keywords': keywords_text,
                         'Competitor_Domain': competitor_domain,
-                        'Keywords': ', '.join(keywords),
+                        'Search_Keywords': ', '.join(keywords),
                         'Matched_Keywords': ', '.join(match_result['matches']),
                         'Match_Count': match_result['match_count'],
                         'Total_Keywords': match_result['total_keywords'],
@@ -167,5 +165,5 @@ class DomainAnalyzer:
             return upgrade_opportunities
             
         except Exception as e:
-            print(f"Error analyzing domain {domain}: {str(e)}")
+            print(f"Error analyzing keywords {keywords_text}: {str(e)}")
             return []

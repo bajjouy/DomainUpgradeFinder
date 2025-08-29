@@ -3,7 +3,7 @@ import pandas as pd
 import io
 import os
 from domain_analyzer import DomainAnalyzer
-from utils import validate_domain, parse_domain_list
+from utils import parse_domain_list
 
 def main():
     st.set_page_config(
@@ -13,7 +13,7 @@ def main():
     )
     
     st.title("🔍 Domain Upgrade Finder")
-    st.markdown("Analyze your domains and find potential buyers by checking if your domains are upgrades of businesses that already rank on Google.")
+    st.markdown("Analyze your keywords and find potential buyers by checking if businesses ranking on Google could upgrade to domains with those keywords.")
     
     # Initialize session state
     if 'results' not in st.session_state:
@@ -27,14 +27,14 @@ def main():
         
         # API Key input
         api_key = st.text_input(
-            "SerpAPI Key", 
-            value=os.getenv("SERPAPI_KEY", ""),
+            "Serper API Key", 
+            value=os.getenv("SERPER_API_KEY", ""),
             type="password",
-            help="Get your API key from https://serpapi.com/"
+            help="Get your API key from https://serper.dev/api-key"
         )
         
         if not api_key:
-            st.error("Please provide a valid SerpAPI key to continue.")
+            st.error("Please provide a valid Serper API key to continue.")
             st.stop()
         
         # Initialize analyzer
@@ -44,76 +44,77 @@ def main():
         st.subheader("Settings")
         max_results = st.slider("Max Google Results", 5, 20, 10)
         show_progress = st.checkbox("Show Progress", value=True)
-        filter_matches = st.checkbox("Show only domains with matches", value=False)
+        filter_matches = st.checkbox("Show only keywords with matches", value=False)
     
     # Main content area
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.subheader("Input Domains")
+        st.subheader("Input Keywords")
         
         # Option 1: File upload
         uploaded_file = st.file_uploader(
-            "Upload domain list (CSV/TXT)",
+            "Upload keyword list (CSV/TXT)",
             type=['csv', 'txt'],
-            help="Upload a file with one domain per line"
+            help="Upload a file with one set of keywords per line"
         )
         
         # Option 2: Text input
         manual_input = st.text_area(
-            "Or paste domains manually (one per line)",
+            "Or paste keywords manually (one set per line)",
             height=200,
-            placeholder="HoustonPlumberServices.com\nAffordableConcreteServices.com\nBestLawyerFirm.net"
+            placeholder="houston plumber services\naffordable concrete services\nbest lawyer firm"
         )
         
         # Process input
-        domains = []
+        keyword_sets = []
         if uploaded_file:
             try:
                 if uploaded_file.name.endswith('.csv'):
                     df = pd.read_csv(uploaded_file)
                     if len(df.columns) > 0:
-                        domains = df.iloc[:, 0].astype(str).tolist()
+                        keyword_sets = df.iloc[:, 0].astype(str).tolist()
                 else:
                     content = uploaded_file.read().decode('utf-8')
-                    domains = parse_domain_list(content)
+                    keyword_sets = parse_domain_list(content)
             except Exception as e:
                 st.error(f"Error reading file: {str(e)}")
         
         elif manual_input.strip():
-            domains = parse_domain_list(manual_input)
+            keyword_sets = parse_domain_list(manual_input)
         
-        # Validate domains
-        if domains:
-            valid_domains = []
-            invalid_domains = []
+        # Validate keyword sets
+        if keyword_sets:
+            valid_keyword_sets = []
+            invalid_keyword_sets = []
             
-            for domain in domains:
-                if validate_domain(domain.strip()):
-                    valid_domains.append(domain.strip())
+            for keywords in keyword_sets:
+                keywords = keywords.strip()
+                if keywords and len(keywords.split()) >= 1:
+                    valid_keyword_sets.append(keywords)
                 else:
-                    invalid_domains.append(domain.strip())
+                    invalid_keyword_sets.append(keywords)
             
-            if valid_domains:
-                st.success(f"✅ {len(valid_domains)} valid domains found")
-                if invalid_domains:
-                    st.warning(f"⚠️ {len(invalid_domains)} invalid domains skipped")
-                    with st.expander("Show invalid domains"):
-                        for domain in invalid_domains:
-                            st.text(domain)
+            if valid_keyword_sets:
+                st.success(f"✅ {len(valid_keyword_sets)} valid keyword sets found")
+                if invalid_keyword_sets:
+                    st.warning(f"⚠️ {len(invalid_keyword_sets)} invalid keyword sets skipped")
+                    with st.expander("Show invalid keyword sets"):
+                        for keywords in invalid_keyword_sets:
+                            st.text(keywords)
             else:
-                st.error("No valid domains found")
+                st.error("No valid keyword sets found")
                 st.stop()
         else:
-            st.info("Please upload a file or enter domains manually to get started.")
+            st.info("Please upload a file or enter keywords manually to get started.")
             st.stop()
     
     with col2:
         st.subheader("Analysis")
         
-        if st.button("🚀 Start Analysis", type="primary", use_container_width=True):
-            if not valid_domains:
-                st.error("No valid domains to analyze")
+        if st.button("🚀 Start Analysis", type="primary", width='stretch'):
+            if not valid_keyword_sets:
+                st.error("No valid keyword sets to analyze")
                 st.stop()
             
             # Progress tracking
@@ -122,24 +123,24 @@ def main():
             
             try:
                 results = []
-                total_domains = len(valid_domains)
+                total_keyword_sets = len(valid_keyword_sets)
                 
-                for i, domain in enumerate(valid_domains):
-                    if show_progress:
-                        progress = (i + 1) / total_domains
+                for i, keywords in enumerate(valid_keyword_sets):
+                    if show_progress and progress_bar is not None and status_text is not None:
+                        progress = (i + 1) / total_keyword_sets
                         progress_bar.progress(progress)
-                        status_text.text(f"Analyzing {domain} ({i + 1}/{total_domains})")
+                        status_text.text(f"Analyzing '{keywords}' ({i + 1}/{total_keyword_sets})")
                     
-                    # Analyze domain
-                    domain_results = st.session_state.analyzer.analyze_domain(
-                        domain, 
+                    # Analyze keywords
+                    keyword_results = st.session_state.analyzer.analyze_keywords(
+                        keywords, 
                         max_results=max_results
                     )
                     
-                    if domain_results:
-                        results.extend(domain_results)
+                    if keyword_results:
+                        results.extend(keyword_results)
                 
-                if show_progress:
+                if show_progress and progress_bar is not None and status_text is not None:
                     status_text.text("Analysis complete!")
                     progress_bar.progress(1.0)
                 
@@ -167,21 +168,21 @@ def main():
             # Summary statistics
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Domains Analyzed", len(st.session_state.results['My_Domain'].unique()))
+                st.metric("Total Keyword Sets Analyzed", int(st.session_state.results['Keywords'].nunique()))
             with col2:
                 st.metric("Upgrade Opportunities", len(df))
             with col3:
-                domains_with_matches = len(df[df['Match_Count'] > 0]['My_Domain'].unique())
-                st.metric("Domains with Matches", domains_with_matches)
+                keywords_with_matches = len(set(df[df['Match_Count'] > 0]['Keywords'].tolist())) if len(df[df['Match_Count'] > 0]) > 0 else 0
+                st.metric("Keywords with Matches", keywords_with_matches)
             
             # Display table
             st.dataframe(
                 df,
-                use_container_width=True,
+                width='stretch',
                 column_config={
-                    "My_Domain": "Your Domain",
+                    "Keywords": "Your Keywords",
                     "Competitor_Domain": "Competitor Domain",
-                    "Keywords": "Keywords",
+                    "Search_Keywords": "Processed Keywords",
                     "Match_Count": st.column_config.NumberColumn(
                         "Matches",
                         format="%d"
@@ -206,24 +207,27 @@ def main():
                 st.download_button(
                     label="📄 Download CSV",
                     data=csv_data,
-                    file_name="domain_upgrade_opportunities.csv",
+                    file_name="keyword_upgrade_opportunities.csv",
                     mime="text/csv",
-                    use_container_width=True
+                    width='stretch'
                 )
             
             with col2:
                 # Excel export
-                excel_buffer = io.BytesIO()
-                with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-                    df.to_excel(writer, sheet_name='Upgrade Opportunities', index=False)
-                excel_data = excel_buffer.getvalue()
+                import tempfile
+                import os as temp_os
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                    df.to_excel(tmp_file.name, sheet_name='Upgrade Opportunities', index=False, engine='openpyxl')
+                    with open(tmp_file.name, 'rb') as f:
+                        excel_data = f.read()
+                    temp_os.unlink(tmp_file.name)
                 
                 st.download_button(
                     label="📊 Download Excel",
                     data=excel_data,
-                    file_name="domain_upgrade_opportunities.xlsx",
+                    file_name="keyword_upgrade_opportunities.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
+                    width='stretch'
                 )
 
 if __name__ == "__main__":
