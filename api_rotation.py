@@ -85,7 +85,7 @@ class APIRotationManager:
     
     def search_google_with_rotation(self, query: str, max_results: int = 10, max_retries: int = None) -> Tuple[List[Dict], Optional[str]]:
         """
-        Search Google with API key rotation and failover
+        Search Google with API key rotation and failover with smart result count reduction
         Returns: (results, api_key_used)
         """
         active_keys = self.get_active_api_keys()
@@ -99,44 +99,65 @@ class APIRotationManager:
         
         last_error = None
         attempts = 0
+        current_max_results = max_results
         
-        for attempt in range(min(max_retries, len(active_keys))):
-            api_key = self.get_next_api_key()
-            
-            if not api_key:
-                break
-            
-            try:
-                results = self._search_with_key(query, api_key, max_results)
-                
-                # Record successful usage
-                api_key.record_usage(success=True)
-                db.session.commit()
-                
-                self._log_system("info", f"Successful search with API key: {api_key.key_name}")
-                
-                return results, api_key.key_name
-                
-            except Exception as e:
-                last_error = str(e)
-                attempts += 1
-                
-                # Record failed usage
-                api_key.record_usage(success=False)
-                
-                # Check if we should deactivate this key
-                if self._should_deactivate_key(api_key, str(e)):
-                    api_key.status = APIKeyStatus.FAILED
-                    self._log_system("warning", f"Deactivated API key {api_key.key_name}: {str(e)}")
-                
-                db.session.commit()
-                
-                self._log_system("warning", f"API key {api_key.key_name} failed: {str(e)}")
-                
-                # Wait before trying next key (reduced for bulk processing)
-                time.sleep(0.1)
+        # Try with progressively smaller result counts if "Query not allowed"
+        result_fallbacks = [max_results, 50, 30, 20, 10] if max_results > 10 else [max_results]
         
-        # All keys failed
+        for fallback_results in result_fallbacks:
+            current_max_results = fallback_results
+            
+            for attempt in range(min(max_retries, len(active_keys))):
+                api_key = self.get_next_api_key()
+                
+                if not api_key:
+                    break
+                
+                try:
+                    results = self._search_with_key(query, api_key, current_max_results)
+                    
+                    # Record successful usage
+                    api_key.record_usage(success=True)
+                    db.session.commit()
+                    
+                    if current_max_results < max_results:
+                        self._log_system("info", f"Successful search with reduced results ({current_max_results}) for query: {query}")
+                    else:
+                        self._log_system("info", f"Successful search with API key: {api_key.key_name}")
+                    
+                    return results, api_key.key_name
+                    
+                except Exception as e:
+                    last_error = str(e)
+                    attempts += 1
+                    
+                    # Record failed usage
+                    api_key.record_usage(success=False)
+                    
+                    # Check if we should deactivate this key
+                    if self._should_deactivate_key(api_key, str(e)):
+                        api_key.status = APIKeyStatus.FAILED
+                        self._log_system("warning", f"Deactivated API key {api_key.key_name}: {str(e)}")
+                    
+                    db.session.commit()
+                    
+                    self._log_system("warning", f"API key {api_key.key_name} failed with {current_max_results} results: {str(e)}")
+                    
+                    # If it's a "Query not allowed" error, try with fewer results
+                    if "Query not allowed" in str(e) and current_max_results > 10:
+                        self._log_system("info", f"Trying with fewer results due to query restriction")
+                        break  # Break to try next fallback count
+                    
+                    # Wait before trying next key (reduced for bulk processing)
+                    time.sleep(0.1)
+            
+            # If we got "Query not allowed", try next fallback count
+            if last_error and "Query not allowed" in last_error and current_max_results > 10:
+                continue
+            else:
+                break  # If other error or we're already at 10 results, stop trying
+        
+        # All keys and fallbacks failed
         error_msg = f"All API keys failed after {attempts} attempts. Last error: {last_error}"
         self._log_system("error", error_msg)
         raise Exception(error_msg)
