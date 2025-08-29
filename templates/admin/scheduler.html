@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Automatic Credit Refresh Scheduler - Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-clock"></i> Automatic Credit Refresh Scheduler</h2>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+
+            <!-- Scheduler Status Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tachometer-alt"></i> Scheduler Status
+                    </h5>
+                    {% if status.is_running %}
+                        <span class="badge bg-success fs-6">🟢 RUNNING</span>
+                    {% else %}
+                        <span class="badge bg-danger fs-6">🔴 STOPPED</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><strong>Status:</strong> 
+                                    {% if status.is_running %}
+                                        <span class="text-success">Running</span>
+                                    {% else %}
+                                        <span class="text-danger">Stopped</span>
+                                    {% endif %}
+                                </li>
+                                <li><strong>Refresh Interval:</strong> {{ status.refresh_interval_minutes }} minutes</li>
+                                <li><strong>Total Refreshes:</strong> {{ status.refresh_count }}</li>
+                                <li><strong>Errors:</strong> {{ status.error_count }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><strong>Last Refresh:</strong> 
+                                    {% if status.last_refresh %}
+                                        {{ status.last_refresh.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                                    {% else %}
+                                        <em>Never</em>
+                                    {% endif %}
+                                </li>
+                                <li><strong>Next Refresh:</strong> 
+                                    {% if status.next_refresh %}
+                                        {{ status.next_refresh.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                                    {% else %}
+                                        <em>Not scheduled</em>
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scheduler Controls -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> Scheduler Controls</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <h6>Start/Stop</h6>
+                            {% if status.is_running %}
+                                <form method="POST" action="{{ url_for('stop_scheduler') }}" class="d-inline">
+                                    <button type="submit" class="btn btn-warning w-100">
+                                        <i class="fas fa-stop"></i> Stop Scheduler
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('start_scheduler') }}" class="d-inline">
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="fas fa-play"></i> Start Scheduler
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <h6>Force Refresh</h6>
+                            <form method="POST" action="{{ url_for('force_scheduler_refresh') }}" class="d-inline">
+                                <button type="submit" class="btn btn-primary w-100" 
+                                        {% if not status.is_running %}disabled title="Start scheduler first"{% endif %}>
+                                    <i class="fas fa-sync"></i> Run Now
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <h6>Set Interval</h6>
+                            <form method="POST" action="{{ url_for('set_scheduler_interval') }}">
+                                <div class="input-group">
+                                    <input type="number" name="interval" class="form-control" 
+                                           value="{{ status.refresh_interval_minutes }}" 
+                                           min="5" max="1440" required>
+                                    <button type="submit" class="btn btn-outline-primary">
+                                        <i class="fas fa-clock"></i> Set
+                                    </button>
+                                </div>
+                                <small class="text-muted">Minutes (5-1440)</small>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Interval Presets -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock"></i> Quick Interval Presets</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 col-md-2 mb-2">
+                            <form method="POST" action="{{ url_for('set_scheduler_interval') }}">
+                                <input type="hidden" name="interval" value="5">
+                                <button type="submit" class="btn btn-outline-info w-100 btn-sm">5 min</button>
+                            </form>
+                        </div>
+                        <div class="col-6 col-md-2 mb-2">
+                            <form method="POST" action="{{ url_for('set_scheduler_interval') }}">
+                                <input type="hidden" name="interval" value="10">
+                                <button type="submit" class="btn btn-outline-info w-100 btn-sm">10 min</button>
+                            </form>
+                        </div>
+                        <div class="col-6 col-md-2 mb-2">
+                            <form method="POST" action="{{ url_for('set_scheduler_interval') }}">
+                                <input type="hidden" name="interval" value="15">
+                                <button type="submit" class="btn btn-outline-info w-100 btn-sm">15 min</button>
+                            </form>
+                        </div>
+                        <div class="col-6 col-md-2 mb-2">
+                            <form method="POST" action="{{ url_for('set_scheduler_interval') }}">
+                                <input type="hidden" name="interval" value="30">
+                                <button type="submit" class="btn btn-outline-info w-100 btn-sm">30 min</button>
+                            </form>
+                        </div>
+                        <div class="col-6 col-md-2 mb-2">
+                            <form method="POST" action="{{ url_for('set_scheduler_interval') }}">
+                                <input type="hidden" name="interval" value="60">
+                                <button type="submit" class="btn btn-outline-info w-100 btn-sm">1 hour</button>
+                            </form>
+                        </div>
+                        <div class="col-6 col-md-2 mb-2">
+                            <form method="POST" action="{{ url_for('set_scheduler_interval') }}">
+                                <input type="hidden" name="interval" value="360">
+                                <button type="submit" class="btn btn-outline-info w-100 btn-sm">6 hours</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Scheduler Logs -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Recent Scheduler Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% if logs %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Level</th>
+                                        <th>Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in logs %}
+                                        <tr>
+                                            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                            <td>
+                                                {% if log.level == 'error' %}
+                                                    <span class="badge bg-danger">Error</span>
+                                                {% elif log.level == 'warning' %}
+                                                    <span class="badge bg-warning">Warning</span>
+                                                {% elif log.level == 'info' %}
+                                                    <span class="badge bg-info">Info</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ log.level.title() }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ log.message }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No scheduler activity logs found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-refresh page every 30 seconds to keep status current -->
+<script>
+setTimeout(() => {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

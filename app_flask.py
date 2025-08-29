@@ -17,6 +17,7 @@ from auth_utils import bcrypt, login_manager, admin_required, client_required, h
 from api_rotation import EnhancedDomainAnalyzer
 from utils import parse_domain_list
 from paypal_integration import PayPalAPI
+from background_scheduler import credits_scheduler
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +45,9 @@ def create_app():
     
     # Initialize domain analyzer
     app.domain_analyzer = EnhancedDomainAnalyzer()
+    
+    # Initialize background scheduler for automatic credit monitoring
+    credits_scheduler.init_app(app)
     
     # Create tables
     with app.app_context():
@@ -271,6 +275,76 @@ def create_app():
             flash('ℹ️ No active API keys found to sync', 'info')
             
         return redirect(url_for('admin_dashboard'))
+    
+    @app.route('/admin/scheduler')
+    @admin_required
+    def admin_scheduler():
+        """Admin page for managing automatic API credit refresh scheduler"""
+        status = credits_scheduler.get_status()
+        
+        # Get recent system logs related to scheduler
+        from models import SystemLog
+        scheduler_logs = SystemLog.query.filter(
+            SystemLog.message.like('%refresh%')
+        ).order_by(SystemLog.created_at.desc()).limit(20).all()
+        
+        return render_template('admin/scheduler.html', 
+                             status=status, 
+                             logs=scheduler_logs)
+    
+    @app.route('/admin/scheduler/start', methods=['POST'])
+    @admin_required
+    def start_scheduler():
+        """Start the automatic credit refresh scheduler"""
+        if not credits_scheduler.is_running:
+            credits_scheduler.start()
+            flash('✅ Automatic credit refresh scheduler started', 'success')
+        else:
+            flash('ℹ️ Scheduler is already running', 'info')
+        return redirect(url_for('admin_scheduler'))
+    
+    @app.route('/admin/scheduler/stop', methods=['POST'])
+    @admin_required
+    def stop_scheduler():
+        """Stop the automatic credit refresh scheduler"""
+        if credits_scheduler.is_running:
+            credits_scheduler.stop()
+            flash('⏹️ Automatic credit refresh scheduler stopped', 'warning')
+        else:
+            flash('ℹ️ Scheduler is already stopped', 'info')
+        return redirect(url_for('admin_scheduler'))
+    
+    @app.route('/admin/scheduler/force-refresh', methods=['POST'])
+    @admin_required
+    def force_scheduler_refresh():
+        """Force an immediate credit refresh"""
+        success, message = credits_scheduler.force_refresh()
+        if success:
+            flash(f'✅ {message}', 'success')
+        else:
+            flash(f'❌ {message}', 'error')
+        return redirect(url_for('admin_scheduler'))
+    
+    @app.route('/admin/scheduler/set-interval', methods=['POST'])
+    @admin_required
+    def set_scheduler_interval():
+        """Update the scheduler refresh interval"""
+        try:
+            interval = int(request.form.get('interval', 15))
+            if interval < 5 or interval > 1440:
+                flash('❌ Interval must be between 5 and 1440 minutes', 'error')
+                return redirect(url_for('admin_scheduler'))
+            
+            success = credits_scheduler.set_refresh_interval(interval)
+            if success:
+                flash(f'✅ Refresh interval updated to {interval} minutes', 'success')
+            else:
+                flash('❌ Failed to update refresh interval', 'error')
+                
+        except (ValueError, TypeError):
+            flash('❌ Invalid interval value', 'error')
+            
+        return redirect(url_for('admin_scheduler'))
     
     @app.route('/admin/api-credits/<int:key_id>/check-live', methods=['POST'])
     @admin_required

@@ -176,6 +176,9 @@
                 <a href="{{ url_for('admin_api_credits') }}" class="btn btn-outline-danger mb-2 w-100">
                     <i class="fas fa-chart-pie"></i> API Credits Monitor
                 </a>
+                <a href="{{ url_for('admin_scheduler') }}" class="btn btn-outline-success mb-2 w-100">
+                    <i class="fas fa-clock"></i> Auto Refresh Scheduler
+                </a>
                 <form method="POST" action="{{ url_for('sync_api_credits') }}" class="d-inline w-100">
                     <button type="submit" class="btn btn-outline-info mb-2 w-100">
                         <i class="fas fa-sync-alt"></i> Sync Live Credits
