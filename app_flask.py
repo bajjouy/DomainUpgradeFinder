@@ -213,8 +213,8 @@ def create_app():
         total_used = sum(k.credits_used for k in active_keys)
         total_remaining = total_credits - total_used
         
-        # Sort keys by priority (highest credits first)
-        sorted_keys = sorted(active_keys, key=lambda k: k.priority_score, reverse=True)
+        # Sort keys by remaining credits (lowest credits first)
+        sorted_keys = sorted(active_keys, key=lambda k: k.remaining_credits, reverse=False)
         
         return render_template('admin/api_credits.html',
                              api_keys=api_keys,
