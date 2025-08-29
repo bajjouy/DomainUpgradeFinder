@@ -360,7 +360,6 @@ def create_app():
                         flash(f'Search completed! Found {total_count} potential matches but no clear upgrade opportunities.', 'info')
                     
                     # Update the search session with final statistics
-                    search_session = SearchSession.query.get(session['current_session_id'])
                     search_session.total_results = total_count
                     search_session.upgrade_results = upgrade_count
                     
