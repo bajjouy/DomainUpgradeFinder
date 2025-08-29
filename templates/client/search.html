@@ -24,7 +24,13 @@
                         <label for="keywords" class="form-label">Keywords (one set per line)</label>
                         <textarea class="form-control" id="keywords" name="keywords" rows="8" 
                                 placeholder="houston plumber&#10;affordable concrete services&#10;best lawyer firm" required></textarea>
-                        <div class="form-text">Each line represents one search (1 coin each)</div>
+                        <div class="form-text">
+                            Each line represents one search (1 coin each)
+                            <br><small class="text-info">
+                                <i class="fas fa-bolt"></i> 
+                                <strong>Bulk Processing:</strong> Lists over 10 keywords automatically use optimized bulk processing with real-time progress tracking.
+                            </small>
+                        </div>
                     </div>
                     
                     {% if current_user.coins > 0 %}

@@ -12,6 +12,8 @@ class APIRotationManager:
     def __init__(self):
         self.base_url = "https://google.serper.dev/search"
         self._current_key_index = 0
+        self._batch_size = 5  # Maximum concurrent searches
+        self._rate_limit_delay = 0.2  # Delay between batches in seconds
     
     def get_active_api_keys(self) -> List[APIKey]:
         """Get all active API keys ordered by usage count (least used first)"""
@@ -33,6 +35,40 @@ class APIRotationManager:
         self._current_key_index += 1
         
         return key
+    
+    def search_google_bulk(self, queries: List[str], max_results: int = 10, progress_callback=None) -> List[Tuple[str, List[Dict], Optional[str]]]:
+        """
+        Perform bulk searches with optimized batching and progress tracking
+        Returns: List of (query, results, api_key_used) tuples
+        """
+        results = []
+        total_queries = len(queries)
+        
+        # Process queries in batches
+        for i in range(0, total_queries, self._batch_size):
+            batch = queries[i:i + self._batch_size]
+            batch_results = []
+            
+            for query in batch:
+                try:
+                    search_results, api_key_used = self.search_google_with_rotation(query, max_results)
+                    batch_results.append((query, search_results, api_key_used))
+                except Exception as e:
+                    self._log_system("error", f"Bulk search failed for query '{query}': {str(e)}")
+                    batch_results.append((query, [], None))
+                
+                # Progress callback
+                if progress_callback:
+                    progress = ((i + len(batch_results)) / total_queries) * 100
+                    progress_callback(progress, query)
+            
+            results.extend(batch_results)
+            
+            # Rate limiting between batches
+            if i + self._batch_size < total_queries:
+                time.sleep(self._rate_limit_delay)
+        
+        return results
     
     def search_google_with_rotation(self, query: str, max_results: int = 10, max_retries: int = None) -> Tuple[List[Dict], Optional[str]]:
         """
@@ -84,8 +120,8 @@ class APIRotationManager:
                 
                 self._log_system("warning", f"API key {api_key.key_name} failed: {str(e)}")
                 
-                # Wait before trying next key
-                time.sleep(0.5)
+                # Wait before trying next key (reduced for bulk processing)
+                time.sleep(0.1)
         
         # All keys failed
         error_msg = f"All API keys failed after {attempts} attempts. Last error: {last_error}"

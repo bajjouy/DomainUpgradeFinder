@@ -141,7 +141,12 @@ class SearchSession(db.Model):
     total_results = db.Column(db.Integer, default=0)
     upgrade_results = db.Column(db.Integer, default=0)
     keyword_list = db.Column(db.Text)  # Original keyword input
+    status = db.Column(db.String(20), default='processing')  # processing, completed, failed
+    progress = db.Column(db.Float, default=0.0)  # Progress percentage
+    current_keyword = db.Column(db.String(200))  # Currently processing keyword
+    processing_time = db.Column(db.Float)  # Total processing time in seconds
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
     
     # Relationships
     user = db.relationship('User', backref='search_sessions')

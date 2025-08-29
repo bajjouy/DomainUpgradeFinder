@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Search Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-cogs"></i> Bulk Search Processing</h2>
+        <p class="text-muted">Processing your large keyword list with optimized batching and real-time progress tracking.</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Processing Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-spinner fa-spin" id="spinnerIcon"></i> Processing Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar"
+                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            0%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Status:</strong> <span id="statusText" class="badge bg-warning">Starting...</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Current Keyword:</strong> <span id="currentKeyword" class="text-muted">-</span>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h4 id="totalResults">0</h4>
+                                <small>Total Results</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h4 id="upgradeResults">0</h4>
+                                <small>Upgrade Opportunities</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h4 id="processingTime">0s</h4>
+                                <small>Processing Time</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h4 id="upgradeRate">0%</h4>
+                                <small>Upgrade Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Details -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Processing Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>Bulk Processing Features:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Optimized batch processing (5 searches per batch)</li>
+                        <li>Intelligent rate limiting to prevent API throttling</li>
+                        <li>Automatic API key rotation for improved reliability</li>
+                        <li>Real-time progress tracking and updates</li>
+                        <li>Efficient database writes with batch operations</li>
+                    </ul>
+                </div>
+                
+                <div id="errorAlert" class="alert alert-danger" style="display: none;">
+                    <strong>Error:</strong> <span id="errorMessage"></span>
+                </div>
+                
+                <div id="completionAlert" class="alert alert-success" style="display: none;">
+                    <strong>Processing Complete!</strong> Your search results are ready.
+                    <a href="#" id="viewResultsLink" class="btn btn-success btn-sm ms-2">View Results</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Log -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list-ul"></i> Processing Log</h5>
+            </div>
+            <div class="card-body">
+                <div id="processingLog" style="height: 300px; overflow-y: auto; background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                    <div class="log-entry">Starting bulk search processing...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const sessionId = {{ session_id }};
+let startTime = Date.now();
+let processingInterval;
+
+function addLogEntry(message) {
+    const log = document.getElementById('processingLog');
+    const timestamp = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="text-muted">[${timestamp}]</span> ${message}`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+}
+
+function updateProgress(data) {
+    // Update progress bar
+    const progressBar = document.getElementById('progressBar');
+    progressBar.style.width = data.progress + '%';
+    progressBar.setAttribute('aria-valuenow', data.progress);
+    progressBar.textContent = Math.round(data.progress) + '%';
+    
+    // Update status
+    document.getElementById('statusText').textContent = data.status || 'Processing';
+    document.getElementById('statusText').className = `badge bg-${data.status === 'completed' ? 'success' : data.status === 'failed' ? 'danger' : 'warning'}`;
+    
+    // Update current keyword
+    if (data.current_keyword) {
+        document.getElementById('currentKeyword').textContent = data.current_keyword;
+    }
+    
+    // Update results
+    document.getElementById('totalResults').textContent = data.total_results || 0;
+    document.getElementById('upgradeResults').textContent = data.upgrade_results || 0;
+    
+    // Update upgrade rate
+    const upgradeRate = data.total_results > 0 ? Math.round((data.upgrade_results / data.total_results) * 100) : 0;
+    document.getElementById('upgradeRate').textContent = upgradeRate + '%';
+    
+    // Update processing time
+    const currentTime = Date.now();
+    const processingTime = Math.round((currentTime - startTime) / 1000);
+    document.getElementById('processingTime').textContent = processingTime + 's';
+}
+
+function startBulkProcessing() {
+    fetch(`/api/bulk-search/${sessionId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            addLogEntry(`✅ Processing completed successfully!`);
+            addLogEntry(`📊 Found ${data.total_results} total results, ${data.upgrade_results} upgrade opportunities`);
+            addLogEntry(`⏱️ Total processing time: ${data.processing_time}s`);
+            
+            document.getElementById('spinnerIcon').className = 'fas fa-check';
+            document.getElementById('completionAlert').style.display = 'block';
+            document.getElementById('viewResultsLink').href = data.session_url;
+            
+            clearInterval(processingInterval);
+        } else {
+            addLogEntry(`❌ Processing failed: ${data.error}`);
+            document.getElementById('errorAlert').style.display = 'block';
+            document.getElementById('errorMessage').textContent = data.error;
+            document.getElementById('spinnerIcon').className = 'fas fa-times';
+            clearInterval(processingInterval);
+        }
+    })
+    .catch(error => {
+        addLogEntry(`❌ Network error: ${error.message}`);
+        document.getElementById('errorAlert').style.display = 'block';
+        document.getElementById('errorMessage').textContent = error.message;
+        clearInterval(processingInterval);
+    });
+}
+
+function pollProgress() {
+    fetch(`/api/search-progress/${sessionId}`)
+    .then(response => response.json())
+    .then(data => {
+        updateProgress(data);
+        
+        // Add progress log entries
+        if (data.current_keyword && data.progress > 0) {
+            addLogEntry(`🔍 Processing: ${data.current_keyword} (${Math.round(data.progress)}%)`);
+        }
+        
+        if (data.status === 'completed' || data.status === 'failed') {
+            clearInterval(processingInterval);
+        }
+    })
+    .catch(error => {
+        console.error('Progress polling error:', error);
+    });
+}
+
+// Start processing when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    addLogEntry('🚀 Initializing bulk search processing...');
+    addLogEntry('⚙️ Optimizing API key rotation and batch processing...');
+    
+    // Start the bulk processing
+    startBulkProcessing();
+    
+    // Poll for progress every 2 seconds
+    processingInterval = setInterval(pollProgress, 2000);
+});
+</script>
+
+{% endblock %}

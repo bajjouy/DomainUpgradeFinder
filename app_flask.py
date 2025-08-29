@@ -287,8 +287,30 @@ def create_app():
                 flash(f'You need {total_searches} coins for this search but only have {current_user.coins} coins.', 'error')
                 return redirect(url_for('buy_coins'))
             
+            # Check for bulk processing limits
+            max_bulk_keywords = 500  # Configurable limit
+            if total_searches > max_bulk_keywords:
+                flash(f'Maximum {max_bulk_keywords} keywords allowed per search session. You entered {total_searches} keywords.', 'error')
+                return render_template('client/search.html')
+            
+            # For bulk processing, redirect to processor
+            if total_searches > 10:  # Use bulk processing for more than 10 keywords
+                session['pending_keywords'] = keywords_input
+                session['pending_total'] = total_searches
+                return redirect(url_for('bulk_search_processor'))
+            
+            # Regular processing for small searches
             try:
                 all_results = []
+                
+                # Create search session
+                search_session = SearchSession()
+                search_session.user_id = current_user.id
+                search_session.total_keywords = total_searches
+                search_session.keyword_list = keywords_input
+                search_session.status = 'processing'
+                db.session.add(search_session)
+                db.session.flush()
                 
                 for keywords in keyword_sets:
                     # Deduct coin for this search
@@ -301,16 +323,6 @@ def create_app():
                     results, api_key_used = app.domain_analyzer.analyze_keywords(keywords)
                     search_duration = (datetime.utcnow() - search_start).total_seconds()
                     
-                    # Create search session first if it doesn't exist
-                    if 'current_session_id' not in session:
-                        search_session = SearchSession()
-                        search_session.user_id = current_user.id
-                        search_session.total_keywords = total_searches
-                        search_session.keyword_list = keywords_input
-                        db.session.add(search_session)
-                        db.session.flush()  # Get the ID
-                        session['current_session_id'] = search_session.id
-                    
                     # Save search history linked to session
                     search_history = SearchHistory()
                     search_history.user_id = current_user.id
@@ -318,11 +330,15 @@ def create_app():
                     search_history.set_results(results)
                     search_history.api_key_used = api_key_used
                     search_history.search_duration = search_duration
-                    search_history.session_id = session['current_session_id']
+                    search_history.session_id = search_session.id
                     
                     db.session.add(search_history)
                     all_results.extend(results)
                 
+                # Complete the session
+                search_session.status = 'completed'
+                search_session.progress = 100.0
+                search_session.completed_at = datetime.utcnow()
                 db.session.commit()
                 
                 if all_results:
@@ -350,9 +366,8 @@ def create_app():
                     
                     db.session.commit()
                     
-                    # Clear the session variable and redirect to the search session page
-                    session_id = session.pop('current_session_id', None)
-                    return redirect(url_for('view_search_session', session_id=session_id))
+                    # Redirect to the search session page
+                    return redirect(url_for('view_search_session', session_id=search_session.id))
                 else:
                     flash('No results found for your keywords.', 'info')
                     return render_template('client/search.html')
@@ -362,6 +377,133 @@ def create_app():
                 return render_template('client/search.html')
         
         return render_template('client/search.html')
+    
+    @app.route('/bulk-search-processor')
+    @client_required
+    def bulk_search_processor():
+        keywords_input = session.get('pending_keywords', '')
+        total_keywords = session.get('pending_total', 0)
+        
+        if not keywords_input or not total_keywords:
+            flash('Invalid search parameters', 'error')
+            return redirect(url_for('search'))
+        
+        # Clear session data
+        session.pop('pending_keywords', None)
+        session.pop('pending_total', None)
+        
+        # Create search session
+        search_session = SearchSession()
+        search_session.user_id = current_user.id
+        search_session.total_keywords = total_keywords
+        search_session.keyword_list = keywords_input
+        search_session.status = 'processing'
+        
+        db.session.add(search_session)
+        db.session.commit()
+        
+        return render_template('client/bulk_processor.html', session_id=search_session.id)
+    
+    @app.route('/api/bulk-search/<int:session_id>', methods=['POST'])
+    @client_required
+    def process_bulk_search(session_id):
+        search_session = SearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id).first_or_404()
+        
+        if search_session.status != 'processing':
+            return jsonify({'error': 'Search session is not in processing state'}), 400
+        
+        try:
+            # Parse keywords
+            keyword_sets = parse_domain_list(search_session.keyword_list)
+            
+            # Check and deduct coins upfront
+            total_cost = len(keyword_sets)
+            if current_user.coins < total_cost:
+                search_session.status = 'failed'
+                db.session.commit()
+                return jsonify({'error': 'Insufficient coins'}), 400
+            
+            # Deduct all coins at once
+            for _ in range(total_cost):
+                current_user.deduct_coins(1, 'bulk_search')
+            
+            # Start processing timer
+            processing_start = datetime.utcnow()
+            all_results = []
+            
+            # Progress tracking callback
+            def update_progress(progress, current_keyword):
+                search_session.progress = progress
+                search_session.current_keyword = current_keyword
+                db.session.commit()
+            
+            # Use bulk search with progress tracking
+            bulk_results = app.domain_analyzer.api_rotation.search_google_bulk(
+                keyword_sets, progress_callback=update_progress
+            )
+            
+            # Process results and save to database in batches
+            batch_histories = []
+            for keywords, results, api_key_used in bulk_results:
+                search_history = SearchHistory()
+                search_history.user_id = current_user.id
+                search_history.keywords = keywords
+                search_history.set_results(results)
+                search_history.api_key_used = api_key_used
+                search_history.session_id = session_id
+                
+                batch_histories.append(search_history)
+                all_results.extend(results)
+                
+                # Batch insert every 50 records
+                if len(batch_histories) >= 50:
+                    db.session.add_all(batch_histories)
+                    db.session.commit()
+                    batch_histories = []
+            
+            # Insert remaining records
+            if batch_histories:
+                db.session.add_all(batch_histories)
+            
+            # Update session with final results
+            processing_end = datetime.utcnow()
+            search_session.total_results = len(all_results)
+            search_session.upgrade_results = len([r for r in all_results if r.get('Is_Upgrade', False)])
+            search_session.status = 'completed'
+            search_session.progress = 100.0
+            search_session.processing_time = (processing_end - processing_start).total_seconds()
+            search_session.completed_at = processing_end
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'total_results': search_session.total_results,
+                'upgrade_results': search_session.upgrade_results,
+                'processing_time': search_session.processing_time,
+                'session_url': url_for('view_search_session', session_id=session_id)
+            })
+            
+        except Exception as e:
+            search_session.status = 'failed'
+            search_session.current_keyword = f'Error: {str(e)}'
+            db.session.commit()
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/search-progress/<int:session_id>')
+    @client_required
+    def get_search_progress(session_id):
+        search_session = SearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id).first_or_404()
+        
+        return jsonify({
+            'progress': search_session.progress,
+            'current_keyword': search_session.current_keyword,
+            'status': search_session.status,
+            'total_results': search_session.total_results,
+            'upgrade_results': search_session.upgrade_results
+        })
     
     @app.route('/download/<format>')
     @client_required
