@@ -41,33 +41,46 @@ class APIRotationManager:
         Perform bulk searches with optimized batching and progress tracking
         Returns: List of (query, results, api_key_used) tuples
         """
+        print(f"DEBUG: Starting bulk search with {len(queries)} queries")
         results = []
         total_queries = len(queries)
+        
+        if total_queries == 0:
+            print("DEBUG: No queries to process")
+            return results
         
         # Process queries in batches
         for i in range(0, total_queries, self._batch_size):
             batch = queries[i:i + self._batch_size]
             batch_results = []
             
-            for query in batch:
+            print(f"DEBUG: Processing batch {i//self._batch_size + 1}, queries {i+1}-{min(i+len(batch), total_queries)} of {total_queries}")
+            
+            for j, query in enumerate(batch):
                 try:
+                    print(f"DEBUG: Searching for query: '{query}'")
                     search_results, api_key_used = self.search_google_with_rotation(query, max_results)
                     batch_results.append((query, search_results, api_key_used))
+                    print(f"DEBUG: Got {len(search_results)} results for query: '{query}'")
                 except Exception as e:
+                    print(f"DEBUG: Error for query '{query}': {str(e)}")
                     self._log_system("error", f"Bulk search failed for query '{query}': {str(e)}")
                     batch_results.append((query, [], None))
                 
                 # Progress callback
                 if progress_callback:
                     progress = ((i + len(batch_results)) / total_queries) * 100
+                    print(f"DEBUG: Progress callback: {progress}% for query '{query}'")
                     progress_callback(progress, query)
             
             results.extend(batch_results)
             
             # Rate limiting between batches
             if i + self._batch_size < total_queries:
+                print(f"DEBUG: Sleeping for {self._rate_limit_delay}s between batches")
                 time.sleep(self._rate_limit_delay)
         
+        print(f"DEBUG: Bulk search completed with {len(results)} total results")
         return results
     
     def search_google_with_rotation(self, query: str, max_results: int = 10, max_retries: int = None) -> Tuple[List[Dict], Optional[str]]:

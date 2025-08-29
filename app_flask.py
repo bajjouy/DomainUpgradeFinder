@@ -440,9 +440,11 @@ def create_app():
                 db.session.commit()
             
             # Use bulk search with progress tracking
-            bulk_results = app.domain_analyzer.api_rotation.search_google_bulk(
+            print(f"DEBUG: About to start bulk search with {len(keyword_sets)} keyword sets")
+            bulk_results = app.domain_analyzer.api_manager.search_google_bulk(
                 keyword_sets, progress_callback=update_progress
             )
+            print(f"DEBUG: Bulk search completed, got {len(bulk_results)} results")
             
             # Process results and save to database in batches
             batch_histories = []
