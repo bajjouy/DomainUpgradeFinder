@@ -60,7 +60,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-text">{{ form.message|nl2br|safe }}</p>
+                        <p class="card-text" style="white-space: pre-wrap;">{{ form.message }}</p>
                         <div class="mt-2">
                             <a href="mailto:{{ form.email }}?subject=Re: {{ form.subject }}" class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-reply"></i> Reply
