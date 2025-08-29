@@ -53,6 +53,8 @@
                     {% endif %}
                     <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
                 {% else %}
+                    <a class="nav-link" href="{{ url_for('about_us') }}">About Us</a>
+                    <a class="nav-link" href="{{ url_for('contact') }}">Contact</a>
                     <a class="nav-link" href="{{ url_for('login') }}">Login</a>
                     <a class="nav-link" href="{{ url_for('register') }}">Register</a>
                 {% endif %}
@@ -74,6 +76,17 @@
 
         {% block content %}{% endblock %}
     </main>
+
+    <!-- WhatsApp Floating Button -->
+    <div style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+        <a href="https://wa.me/212699095328?text=Hello%20Domain%20Upgrade%20Pro%20team,%20I%20need%20assistance%20with..." 
+           target="_blank" 
+           class="btn btn-success rounded-circle p-3 shadow" 
+           style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;"
+           title="Chat on WhatsApp">
+            <i class="fab fa-whatsapp fa-2x"></i>
+        </a>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}{% endblock %}

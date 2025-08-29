@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}SMTP Settings - Admin{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-envelope"></i> SMTP Email Settings</h2>
+                <p class="text-muted">Configure Gmail SMTP to send contact form notifications</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-cog"></i> SMTP Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="smtp_server" class="form-label">SMTP Server</label>
+                                <input type="text" class="form-control" id="smtp_server" name="smtp_server" 
+                                       value="{{ smtp_settings.smtp_server if smtp_settings else 'smtp.gmail.com' }}" required>
+                                <div class="form-text">Gmail SMTP server (default: smtp.gmail.com)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="smtp_port" class="form-label">SMTP Port</label>
+                                <input type="number" class="form-control" id="smtp_port" name="smtp_port" 
+                                       value="{{ smtp_settings.smtp_port if smtp_settings else 587 }}" required>
+                                <div class="form-text">Port 587 for TLS</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="smtp_username" class="form-label">Gmail Username</label>
+                        <input type="email" class="form-control" id="smtp_username" name="smtp_username" 
+                               value="{{ smtp_settings.smtp_username if smtp_settings else '' }}" required>
+                        <div class="form-text">Your Gmail email address</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="smtp_password" class="form-label">Gmail App Password</label>
+                        <input type="password" class="form-control" id="smtp_password" name="smtp_password" 
+                               value="{{ smtp_settings.smtp_password if smtp_settings else '' }}" required>
+                        <div class="form-text">Use Gmail App Password, not your regular password</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="sender_email" class="form-label">Sender Email</label>
+                        <input type="email" class="form-control" id="sender_email" name="sender_email" 
+                               value="{{ smtp_settings.sender_email if smtp_settings else '' }}" required>
+                        <div class="form-text">Email address that will appear as sender</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="sender_name" class="form-label">Sender Name</label>
+                        <input type="text" class="form-control" id="sender_name" name="sender_name" 
+                               value="{{ smtp_settings.sender_name if smtp_settings else 'Domain Upgrade Pro' }}" required>
+                        <div class="form-text">Name that will appear as sender</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="admin_email" class="form-label">Admin Notification Email</label>
+                        <input type="email" class="form-control" id="admin_email" name="admin_email" 
+                               value="{{ smtp_settings.admin_email if smtp_settings else '' }}" required>
+                        <div class="form-text">Your email address to receive contact form notifications</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save SMTP Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Gmail Setup Instructions</h5>
+            </div>
+            <div class="card-body">
+                <ol class="list-unstyled">
+                    <li class="mb-3">
+                        <strong>1. Enable 2-Factor Authentication</strong>
+                        <p class="text-muted small">Go to your Google Account settings and enable 2-factor authentication</p>
+                    </li>
+                    <li class="mb-3">
+                        <strong>2. Generate App Password</strong>
+                        <p class="text-muted small">Go to Google Account > Security > App passwords and create a new app password</p>
+                    </li>
+                    <li class="mb-3">
+                        <strong>3. Use App Password</strong>
+                        <p class="text-muted small">Use the generated 16-character app password (not your regular Gmail password)</p>
+                    </li>
+                    <li class="mb-3">
+                        <strong>4. Test Configuration</strong>
+                        <p class="text-muted small">Save settings and test with a contact form submission</p>
+                    </li>
+                </ol>
+                
+                {% if smtp_settings %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Settings Configured</strong>
+                    <br>Last updated: {{ smtp_settings.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Not Configured</strong>
+                    <br>Please configure SMTP settings to enable email notifications.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-inbox"></i> Contact Forms</h5>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted">View and manage contact form submissions</p>
+                <a href="{{ url_for('admin_contact_forms') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-envelope"></i> View Contact Forms
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

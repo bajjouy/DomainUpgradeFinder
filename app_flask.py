@@ -11,7 +11,7 @@ import tempfile
 import logging
 
 # Local imports
-from models import db, User, APIKey, CoinTransaction, SearchHistory, SearchSession, PricingPackage, SystemLog, UserRole, APIKeyStatus, TransactionStatus, PaymentMethod, PaymentMethodType
+from models import db, User, APIKey, CoinTransaction, SearchHistory, SearchSession, PricingPackage, SystemLog, UserRole, APIKeyStatus, TransactionStatus, PaymentMethod, PaymentMethodType, SMTPSettings, ContactForm
 from config import Config
 from auth_utils import bcrypt, login_manager, admin_required, client_required, hash_password, check_password
 from api_rotation import EnhancedDomainAnalyzer
@@ -84,6 +84,10 @@ def create_app():
             else:
                 return redirect(url_for('client_dashboard'))
         return render_template('index.html')
+    
+    @app.route('/about-us')
+    def about_us():
+        return render_template('about_us.html')
     
     # Authentication routes
     @app.route('/login', methods=['GET', 'POST'])
@@ -1455,6 +1459,158 @@ def create_app():
         user = User.query.get(transaction.user_id)
         flash(f'Payment rejected for {user.email}. Reason: {admin_notes or "No reason provided"}', 'warning')
         return redirect(url_for('admin_payments'))
+    
+    # SMTP Configuration Routes
+    @app.route('/admin/smtp-settings', methods=['GET', 'POST'])
+    @admin_required
+    def admin_smtp_settings():
+        if request.method == 'POST':
+            # Get form data
+            smtp_server = request.form.get('smtp_server', 'smtp.gmail.com')
+            smtp_port = int(request.form.get('smtp_port', 587))
+            smtp_username = request.form.get('smtp_username')
+            smtp_password = request.form.get('smtp_password')
+            sender_email = request.form.get('sender_email')
+            sender_name = request.form.get('sender_name', 'Domain Upgrade Pro')
+            admin_email = request.form.get('admin_email')
+            
+            if not all([smtp_username, smtp_password, sender_email, admin_email]):
+                flash('All SMTP fields are required.', 'error')
+                return render_template('admin/smtp_settings.html')
+            
+            # Check if settings exist, update or create
+            smtp_settings = SMTPSettings.query.first()
+            if smtp_settings:
+                smtp_settings.smtp_server = smtp_server
+                smtp_settings.smtp_port = smtp_port
+                smtp_settings.smtp_username = smtp_username
+                smtp_settings.smtp_password = smtp_password
+                smtp_settings.sender_email = sender_email
+                smtp_settings.sender_name = sender_name
+                smtp_settings.admin_email = admin_email
+                smtp_settings.updated_at = datetime.utcnow()
+            else:
+                smtp_settings = SMTPSettings(
+                    smtp_server=smtp_server,
+                    smtp_port=smtp_port,
+                    smtp_username=smtp_username,
+                    smtp_password=smtp_password,
+                    sender_email=sender_email,
+                    sender_name=sender_name,
+                    admin_email=admin_email
+                )
+                db.session.add(smtp_settings)
+            
+            db.session.commit()
+            flash('SMTP settings saved successfully!', 'success')
+            return redirect(url_for('admin_smtp_settings'))
+        
+        # GET request - show current settings
+        smtp_settings = SMTPSettings.query.first()
+        return render_template('admin/smtp_settings.html', smtp_settings=smtp_settings)
+    
+    # Contact Form Routes
+    @app.route('/contact', methods=['GET', 'POST'])
+    def contact():
+        if request.method == 'POST':
+            name = request.form.get('name')
+            email = request.form.get('email')
+            subject = request.form.get('subject')
+            message = request.form.get('message')
+            
+            if not all([name, email, subject, message]):
+                flash('All fields are required.', 'error')
+                return render_template('contact.html')
+            
+            # Save contact form
+            contact_form = ContactForm(
+                name=name,
+                email=email,
+                subject=subject,
+                message=message,
+                ip_address=request.remote_addr
+            )
+            db.session.add(contact_form)
+            db.session.commit()
+            
+            # Send email notification to admin
+            try:
+                send_contact_notification(contact_form)
+                flash('Thank you for your message! We will get back to you soon.', 'success')
+            except Exception as e:
+                flash('Message saved but email notification failed. Admin will still see your message.', 'warning')
+                print(f"Email notification error: {e}")
+            
+            return redirect(url_for('contact'))
+        
+        return render_template('contact.html')
+    
+    @app.route('/admin/contact-forms')
+    @admin_required
+    def admin_contact_forms():
+        page = request.args.get('page', 1, type=int)
+        contact_forms = ContactForm.query.order_by(ContactForm.created_at.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+        return render_template('admin/contact_forms.html', contact_forms=contact_forms)
+    
+    @app.route('/admin/contact-forms/<int:form_id>/mark-read', methods=['POST'])
+    @admin_required
+    def mark_contact_read(form_id):
+        contact_form = ContactForm.query.get_or_404(form_id)
+        contact_form.is_read = True
+        db.session.commit()
+        flash('Message marked as read.', 'success')
+        return redirect(url_for('admin_contact_forms'))
+    
+    def send_contact_notification(contact_form):
+        """Send email notification to admin when contact form is submitted"""
+        smtp_settings = SMTPSettings.query.filter_by(is_active=True).first()
+        if not smtp_settings:
+            return False
+        
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Create message
+            msg = MIMEMultipart()
+            msg['From'] = smtp_settings.sender_email
+            msg['To'] = smtp_settings.admin_email
+            msg['Subject'] = f"New Contact Form: {contact_form.subject}"
+            
+            # Email body
+            body = f"""
+New contact form submission from Domain Upgrade Pro:
+
+Name: {contact_form.name}
+Email: {contact_form.email}
+Subject: {contact_form.subject}
+IP Address: {contact_form.ip_address}
+Date: {contact_form.created_at.strftime('%Y-%m-%d %H:%M:%S')}
+
+Message:
+{contact_form.message}
+
+---
+This is an automated message from Domain Upgrade Pro.
+"""
+            
+            msg.attach(MIMEText(body, 'plain'))
+            
+            # Send email
+            server = smtplib.SMTP(smtp_settings.smtp_server, smtp_settings.smtp_port)
+            server.starttls()
+            server.login(smtp_settings.smtp_username, smtp_settings.smtp_password)
+            text = msg.as_string()
+            server.sendmail(smtp_settings.sender_email, smtp_settings.admin_email, text)
+            server.quit()
+            
+            return True
+        except Exception as e:
+            print(f"Email sending error: {e}")
+            return False
     
     # Search Session Management Routes
     @app.route('/search-session/<int:session_id>')

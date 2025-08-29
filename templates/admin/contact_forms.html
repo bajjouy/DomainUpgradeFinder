@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Forms - Admin{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-inbox"></i> Contact Form Submissions</h2>
+                <p class="text-muted">View and manage contact form messages</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <a href="{{ url_for('admin_smtp_settings') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-cog"></i> SMTP Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if contact_forms.items %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-envelope"></i> Messages ({{ contact_forms.total }} total)</h5>
+            </div>
+            <div class="card-body">
+                {% for form in contact_forms.items %}
+                <div class="card mb-3 {{ 'border-primary' if not form.is_read else '' }}">
+                    <div class="card-header d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title mb-1">
+                                {{ form.subject }}
+                                {% if not form.is_read %}
+                                <span class="badge bg-primary ms-2">New</span>
+                                {% endif %}
+                            </h6>
+                            <div class="text-muted small">
+                                <i class="fas fa-user"></i> {{ form.name }} 
+                                <i class="fas fa-envelope ms-2"></i> {{ form.email }}
+                                <i class="fas fa-clock ms-2"></i> {{ form.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% if form.ip_address %}
+                                <i class="fas fa-globe ms-2"></i> {{ form.ip_address }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            {% if not form.is_read %}
+                            <form method="POST" action="{{ url_for('mark_contact_read', form_id=form.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Mark as read">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ form.message|nl2br|safe }}</p>
+                        <div class="mt-2">
+                            <a href="mailto:{{ form.email }}?subject=Re: {{ form.subject }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-reply"></i> Reply
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Pagination -->
+                {% if contact_forms.pages > 1 %}
+                <nav aria-label="Contact forms pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if contact_forms.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_contact_forms', page=contact_forms.prev_num) }}">Previous</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in contact_forms.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num != contact_forms.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin_contact_forms', page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if contact_forms.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_contact_forms', page=contact_forms.next_num) }}">Next</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h4>No Contact Forms Yet</h4>
+                <p class="text-muted">Contact form submissions will appear here when users send messages.</p>
+                <a href="{{ url_for('contact') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-eye"></i> View Contact Page
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

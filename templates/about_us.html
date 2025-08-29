@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}About Us - Domain Upgrade Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-5">
+            <h1 class="display-4"><i class="fas fa-users text-primary"></i> About Domain Upgrade Pro</h1>
+            <p class="lead text-muted">Revolutionizing domain sales through data-driven competitor analysis</p>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3><i class="fas fa-bullseye text-primary"></i> Our Mission</h3>
+                <p>Domain Upgrade Pro transforms the traditional domain sales approach by leveraging advanced search technology and competitor analysis. We help domain investors and sellers identify businesses that are already ranking on Google but using suboptimal domain names.</p>
+                <p>Our platform analyzes keyword patterns, search rankings, and competitor landscapes to pinpoint the most promising upgrade opportunities, making domain sales more strategic and data-driven.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3><i class="fas fa-chart-line text-success"></i> How It Works</h3>
+                <ol class="list-unstyled">
+                    <li><i class="fas fa-search text-primary"></i> <strong>Keyword Analysis:</strong> Extract keywords from your premium domains</li>
+                    <li><i class="fas fa-google text-warning"></i> <strong>Google Search:</strong> Find businesses ranking for those exact keywords</li>
+                    <li><i class="fas fa-crosshairs text-info"></i> <strong>Competitor Identification:</strong> Identify businesses using less optimal domains</li>
+                    <li><i class="fas fa-trophy text-success"></i> <strong>Upgrade Opportunities:</strong> Present clear upgrade paths with ranking data</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="text-center mb-4"><i class="fas fa-star text-warning"></i> Why Choose Domain Upgrade Pro?</h3>
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-bolt fa-3x text-primary mb-3"></i>
+                            <h5>Lightning Fast</h5>
+                            <p class="text-muted">Parallel processing with 10 simultaneous searches for 10x speed improvement</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-brain fa-3x text-success mb-3"></i>
+                            <h5>Smart Analysis</h5>
+                            <p class="text-muted">Advanced keyword matching and competitor analysis algorithms</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-shield-alt fa-3x text-info mb-3"></i>
+                            <h5>Reliable Platform</h5>
+                            <p class="text-muted">Enterprise-grade API rotation and credit monitoring system</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-8 mx-auto">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h3><i class="fas fa-rocket text-primary"></i> Ready to Transform Your Domain Sales?</h3>
+                <p class="mb-4">Join hundreds of domain investors who are already using data-driven strategies to identify the best upgrade opportunities.</p>
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-user-plus"></i> Get Started Free
+                    </a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('search') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-search"></i> Start Searching
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="text-center mb-4"><i class="fas fa-phone text-primary"></i> Contact Us</h3>
+                <div class="row">
+                    <div class="col-md-6 text-center mb-3">
+                        <h5><i class="fas fa-envelope text-primary"></i> Email Support</h5>
+                        <p class="text-muted">Get in touch with our team for any questions or support</p>
+                        <a href="mailto:support@domainupgradepro.com" class="btn btn-outline-primary">
+                            <i class="fas fa-envelope"></i> support@domainupgradepro.com
+                        </a>
+                    </div>
+                    <div class="col-md-6 text-center mb-3">
+                        <h5><i class="fab fa-whatsapp text-success"></i> WhatsApp Support</h5>
+                        <p class="text-muted">Quick assistance via WhatsApp for urgent matters</p>
+                        <a href="https://wa.me/212699095328?text=Hello%20Domain%20Upgrade%20Pro%20team,%20I%20need%20assistance%20with..." 
+                           target="_blank" class="btn btn-outline-success">
+                            <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

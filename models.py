@@ -261,3 +261,36 @@ class PaymentMethod(db.Model):
                 'email': self.paypal_email,
                 'instructions': self.paypal_instructions
             }
+
+class SMTPSettings(db.Model):
+    __tablename__ = 'smtp_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    smtp_server = db.Column(db.String(200), nullable=False, default='smtp.gmail.com')
+    smtp_port = db.Column(db.Integer, nullable=False, default=587)
+    smtp_username = db.Column(db.String(200), nullable=False)
+    smtp_password = db.Column(db.String(200), nullable=False)
+    sender_email = db.Column(db.String(200), nullable=False)
+    sender_name = db.Column(db.String(100), nullable=False, default='Domain Upgrade Pro')
+    admin_email = db.Column(db.String(200), nullable=False)  # Email to receive notifications
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SMTPSettings {self.sender_email}>'
+
+class ContactForm(db.Model):
+    __tablename__ = 'contact_forms'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(200), nullable=False)
+    subject = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    ip_address = db.Column(db.String(50))
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ContactForm {self.name} - {self.subject}>'

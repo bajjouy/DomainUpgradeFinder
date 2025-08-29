@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Us - Domain Upgrade Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-5">
+            <h1 class="display-4"><i class="fas fa-envelope text-primary"></i> Contact Us</h1>
+            <p class="lead text-muted">Get in touch with our team</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-paper-plane"></i> Send us a Message</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Your Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Your Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject *</label>
+                        <input type="text" class="form-control" id="subject" name="subject" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="message" class="form-label">Message *</label>
+                        <textarea class="form-control" id="message" name="message" rows="6" required></textarea>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-paper-plane"></i> Send Message
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6 text-center mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <i class="fas fa-envelope fa-3x text-primary mb-3"></i>
+                <h5>Email Support</h5>
+                <p class="text-muted">Get comprehensive support via email</p>
+                <a href="mailto:support@domainupgradepro.com" class="btn btn-outline-primary">
+                    support@domainupgradepro.com
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 text-center mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <i class="fab fa-whatsapp fa-3x text-success mb-3"></i>
+                <h5>WhatsApp Support</h5>
+                <p class="text-muted">Quick assistance for urgent matters</p>
+                <a href="https://wa.me/212699095328?text=Hello%20Domain%20Upgrade%20Pro%20team,%20I%20need%20assistance%20with..." 
+                   target="_blank" class="btn btn-outline-success">
+                    <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
