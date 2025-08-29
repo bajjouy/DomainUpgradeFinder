@@ -756,15 +756,42 @@ def create_app():
                 db.session.commit()
                 
                 # Always process results, even if empty
-                # Filter results for UI display (only show upgrade opportunities) 
-                upgrade_results = [r for r in all_results if r.get('Is_Upgrade', False)] if all_results else []
+                # Group results by keyword for display
+                def group_results_by_keyword(results):
+                    """Group competitor domains under same keyword as one upgrade opportunity"""
+                    grouped = {}
+                    for result in results:
+                        keyword = result['Keywords']
+                        if keyword not in grouped:
+                            grouped[keyword] = {
+                                'Keywords': keyword,
+                                'Competitors': [],
+                                'Has_Upgrade': False,
+                                'Total_Competitors': 0,
+                                'Upgrade_Competitors': 0
+                            }
+                        
+                        # Add competitor to this keyword group
+                        grouped[keyword]['Competitors'].append(result)
+                        grouped[keyword]['Total_Competitors'] += 1
+                        
+                        # Track if this keyword group has any upgrade opportunities
+                        if result.get('Is_Upgrade', False):
+                            grouped[keyword]['Has_Upgrade'] = True
+                            grouped[keyword]['Upgrade_Competitors'] += 1
+                    
+                    return grouped
+                
+                # Group results and filter for upgrade opportunities
+                grouped_results = group_results_by_keyword(all_results) if all_results else {}
+                upgrade_groups = {k: v for k, v in grouped_results.items() if v['Has_Upgrade']}
                 
                 # Store search session ID for downloads (much smaller than full data)
                 session['latest_session_id'] = search_session.id
                 
                 # Calculate counts
                 total_count = len(all_results) if all_results else 0
-                upgrade_count = len(upgrade_results)
+                upgrade_count = len(upgrade_groups)  # Count unique keywords with upgrades, not individual domains
                 
                 # Update the search session with final statistics
                 search_session.total_results = total_count
@@ -779,10 +806,10 @@ def create_app():
                 else:
                     flash('Search completed! No results found for your keywords.', 'warning')
                 
-                # Always show results page with data
+                # Always show results page with grouped data
                 return render_template('client/search.html', 
                                      show_results=True,
-                                     results=upgrade_results,
+                                     grouped_results=upgrade_groups,
                                      all_results=all_results or [],
                                      total_results=total_count,
                                      upgrade_count=upgrade_count)
@@ -932,10 +959,40 @@ def create_app():
             if batch_histories:
                 db.session.add_all(batch_histories)
             
+            # Group results by keyword for upgrade counting (1 keyword = 1 upgrade opportunity)
+            def group_results_by_keyword(results):
+                """Group competitor domains under same keyword as one upgrade opportunity"""
+                grouped = {}
+                for result in results:
+                    keyword = result['Keywords']
+                    if keyword not in grouped:
+                        grouped[keyword] = {
+                            'Keywords': keyword,
+                            'Competitors': [],
+                            'Has_Upgrade': False,
+                            'Total_Competitors': 0,
+                            'Upgrade_Competitors': 0
+                        }
+                    
+                    # Add competitor to this keyword group
+                    grouped[keyword]['Competitors'].append(result)
+                    grouped[keyword]['Total_Competitors'] += 1
+                    
+                    # Track if this keyword group has any upgrade opportunities
+                    if result.get('Is_Upgrade', False):
+                        grouped[keyword]['Has_Upgrade'] = True
+                        grouped[keyword]['Upgrade_Competitors'] += 1
+                
+                return grouped
+            
+            # Group results and count unique keywords with upgrades
+            grouped_results = group_results_by_keyword(all_results)
+            upgrade_keyword_count = len([group for group in grouped_results.values() if group['Has_Upgrade']])
+            
             # Update session with final results
             processing_end = datetime.utcnow()
             search_session.total_results = len(all_results)
-            search_session.upgrade_results = len([r for r in all_results if r.get('Is_Upgrade', False)])
+            search_session.upgrade_results = upgrade_keyword_count  # Count unique keywords, not individual domains
             search_session.status = 'completed'
             search_session.progress = 100.0
             search_session.processing_time = (processing_end - processing_start).total_seconds()
@@ -1334,18 +1391,47 @@ def create_app():
         
         # Collect all results
         all_results = []
-        upgrade_results = []
         for search in searches:
             results = search.get_results()
             if results:
                 all_results.extend(results)
-                upgrade_results.extend([r for r in results if r.get('Is_Upgrade', False)])
+        
+        # Group results by keyword for display (same logic as search page)
+        def group_results_by_keyword(results):
+            """Group competitor domains under same keyword as one upgrade opportunity"""
+            grouped = {}
+            for result in results:
+                keyword = result['Keywords']
+                if keyword not in grouped:
+                    grouped[keyword] = {
+                        'Keywords': keyword,
+                        'Competitors': [],
+                        'Has_Upgrade': False,
+                        'Total_Competitors': 0,
+                        'Upgrade_Competitors': 0
+                    }
+                
+                # Add competitor to this keyword group
+                grouped[keyword]['Competitors'].append(result)
+                grouped[keyword]['Total_Competitors'] += 1
+                
+                # Track if this keyword group has any upgrade opportunities
+                if result.get('Is_Upgrade', False):
+                    grouped[keyword]['Has_Upgrade'] = True
+                    grouped[keyword]['Upgrade_Competitors'] += 1
+            
+            return grouped
+        
+        # Group results and filter for upgrade opportunities
+        grouped_results = group_results_by_keyword(all_results) if all_results else {}
+        upgrade_groups = {k: v for k, v in grouped_results.items() if v['Has_Upgrade']}
         
         return render_template('client/search_session.html',
                              session=search_session,
                              searches=searches,
                              all_results=all_results,
-                             upgrade_results=upgrade_results)
+                             grouped_results=upgrade_groups,
+                             upgrade_count=len(upgrade_groups))
     
     @app.route('/delete-search-session/<int:session_id>', methods=['POST'])
     @client_required
