@@ -449,18 +449,43 @@ def create_app():
             )
             print(f"DEBUG: Bulk search completed, got {len(bulk_results)} results")
             
-            # Process results and save to database in batches
+            # Process results with upgrade analysis and save to database in batches
             batch_histories = []
-            for keywords, results, api_key_used in bulk_results:
+            for keywords, raw_results, api_key_used in bulk_results:
+                # IMPORTANT: Analyze raw results for upgrade opportunities
+                analyzed_results = []
+                parsed_keywords = app.domain_analyzer.parse_keywords(keywords)
+                
+                for result in raw_results:
+                    competitor_domain = app.domain_analyzer.extract_domain_from_url(result['url'])
+                    
+                    if competitor_domain:
+                        # Check keyword match for upgrade opportunities
+                        match_result = app.domain_analyzer.check_keyword_match(parsed_keywords, competitor_domain)
+                        
+                        # Include all results with match details
+                        if match_result['match_count'] > 0:
+                            analyzed_results.append({
+                                'Keywords': keywords,
+                                'Competitor_Domain': competitor_domain,
+                                'Search_Keywords': ', '.join(parsed_keywords),
+                                'Matched_Keywords': ', '.join(match_result['matches']),
+                                'Match_Count': match_result['match_count'],
+                                'Total_Keywords': match_result['total_keywords'],
+                                'Is_Upgrade': match_result['is_upgrade'],
+                                'Google_Rank': result['rank'],
+                                'Competitor_Title': result['title']
+                            })
+                
                 search_history = SearchHistory()
                 search_history.user_id = current_user.id
                 search_history.keywords = keywords
-                search_history.set_results(results)
+                search_history.set_results(analyzed_results)  # Save analyzed results with upgrade info
                 search_history.api_key_used = api_key_used
                 search_history.session_id = session_id
                 
                 batch_histories.append(search_history)
-                all_results.extend(results)
+                all_results.extend(analyzed_results)
                 
                 # Batch insert every 50 records
                 if len(batch_histories) >= 50:
