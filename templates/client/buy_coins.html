@@ -40,9 +40,9 @@
                             <button class="btn btn-primary" onclick="buyPackage({{ package.id }}, '{{ package.name }}', {{ package.price_cents }})">
                                 <i class="fas fa-credit-card"></i> Pay with {{ method.name }}
                             </button>
-                        {% elif method.method_type.value == 'PAYPAL' %}
-                            <button class="btn btn-outline-info" onclick="createPayPalPayment({{ package.id }}, '{{ package.name }}')">
-                                <i class="fas fa-paypal"></i> Pay with {{ method.name }}
+                        {% elif method.method_type.value == 'PAYPAL' and method.is_active %}
+                            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#paypalModal{{ package.id }}{{ method.id }}">
+                                <i class="fas fa-paypal"></i> {{ method.name }}
                             </button>
                         {% endif %}
                     {% endfor %}
@@ -120,10 +120,19 @@
                         
                         <div class="card">
                             <div class="card-body">
-                                <h6><i class="fas fa-paypal"></i> PayPal Instructions</h6>
+                                <h6><i class="fas fa-paypal"></i> Manual PayPal Payment</h6>
+                                {% if method.paypal_email %}
                                 <p><strong>Send payment to:</strong> {{ method.paypal_email }}</p>
+                                {% else %}
+                                <p><strong>Send payment to your PayPal email</strong></p>
+                                {% endif %}
                                 <p><strong>Amount:</strong> ${{ "%.2f"|format(package.price_dollars) }}</p>
                                 <p><strong>Include in payment note:</strong> Your username ({{ current_user.email }}) and package "{{ package.name }}"</p>
+                                
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-clock"></i>
+                                    <strong>Payment will be confirmed within 24 hours maximum</strong>
+                                </div>
                                 
                                 {% if method.paypal_instructions %}
                                 <hr>
