@@ -549,6 +549,17 @@ def create_app():
         flash('Pricing package added', 'success')
         return redirect(url_for('admin_pricing'))
     
+    @app.route('/admin/pricing/<int:package_id>/toggle')
+    @admin_required
+    def toggle_pricing_package(package_id):
+        package = PricingPackage.query.get_or_404(package_id)
+        package.is_active = not package.is_active
+        db.session.commit()
+        
+        status = "activated" if package.is_active else "deactivated"
+        flash(f'Package "{package.name}" has been {status}!', 'success')
+        return redirect(url_for('admin_pricing'))
+    
     @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
     @admin_required
     def delete_user(user_id):
