@@ -148,7 +148,7 @@
                                 </td>
                                 <td>
                                     <a href="{{ url_for('toggle_api_key', key_id=key.id) }}" 
-                                       class="btn btn-sm btn-outline-primary">
+                                       class="btn btn-sm {{ 'btn-outline-danger' if key.status.value == 'active' else 'btn-outline-success' }}">
                                         {{ 'Deactivate' if key.status.value == 'active' else 'Activate' }}
                                     </a>
                                 </td>
