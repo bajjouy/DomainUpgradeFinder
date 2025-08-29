@@ -560,6 +560,21 @@ def create_app():
         flash(f'Package "{package.name}" has been {status}!', 'success')
         return redirect(url_for('admin_pricing'))
     
+    @app.route('/admin/pricing/<int:package_id>/delete', methods=['POST'])
+    @admin_required
+    def delete_pricing_package(package_id):
+        package = PricingPackage.query.get_or_404(package_id)
+        package_name = package.name
+        
+        # Check if any users have transactions related to this package
+        # We could add this check if needed, but for now we'll allow deletion
+        
+        db.session.delete(package)
+        db.session.commit()
+        
+        flash(f'Package "{package_name}" has been deleted permanently!', 'success')
+        return redirect(url_for('admin_pricing'))
+    
     @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
     @admin_required
     def delete_user(user_id):
