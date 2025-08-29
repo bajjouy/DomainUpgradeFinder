@@ -30,7 +30,7 @@
                         <label for="daily_limit" class="form-label">Daily Limit</label>
                         <input type="number" class="form-control" id="daily_limit" name="daily_limit" value="2500">
                     </div>
-                    <button type="submit" class="btn btn-primary">Add API Key</button>
+                    <button type="submit" class="btn btn-primary">Add Single API Key</button>
                 </form>
             </div>
         </div>
@@ -56,6 +56,45 @@
                         <small class="text-danger">Failed</small>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Import Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-upload"></i> Bulk Import API Keys</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('bulk_add_api_keys') }}">
+                    <div class="mb-3">
+                        <label for="bulk_keys" class="form-label">Paste API Keys (One per line)</label>
+                        <textarea class="form-control" id="bulk_keys" name="bulk_keys" rows="8" 
+                                  placeholder="Paste your API keys here, one per line:&#10;abc123def456...&#10;xyz789ghi012...&#10;key3example..."></textarea>
+                        <small class="text-muted">Each API key will be automatically named: api1, api2, api3, etc.</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="bulk_daily_limit" class="form-label">Daily Limit (for all keys)</label>
+                            <input type="number" class="form-control" id="bulk_daily_limit" name="bulk_daily_limit" value="2500">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="bulk_total_credits" class="form-label">Total Credits (for all keys)</label>
+                            <input type="number" class="form-control" id="bulk_total_credits" name="bulk_total_credits" value="2500">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-upload"></i> Import API Keys
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="clearBulkForm()">
+                            <i class="fas fa-trash"></i> Clear
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -122,4 +161,12 @@
         </div>
     </div>
 </div>
+
+<script>
+function clearBulkForm() {
+    document.getElementById('bulk_keys').value = '';
+    document.getElementById('bulk_daily_limit').value = '2500';
+    document.getElementById('bulk_total_credits').value = '2500';
+}
+</script>
 {% endblock %}

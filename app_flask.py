@@ -397,6 +397,88 @@ def create_app():
         flash('API key added successfully', 'success')
         return redirect(url_for('admin_api_keys'))
     
+    @app.route('/admin/api-keys/bulk-add', methods=['POST'])
+    @admin_required
+    def bulk_add_api_keys():
+        """Bulk add API keys from textarea input"""
+        bulk_keys_text = request.form.get('bulk_keys', '').strip()
+        bulk_daily_limit = int(request.form.get('bulk_daily_limit', 2500))
+        bulk_total_credits = int(request.form.get('bulk_total_credits', 2500))
+        
+        if not bulk_keys_text:
+            flash('❌ Please provide API keys to import', 'error')
+            return redirect(url_for('admin_api_keys'))
+        
+        # Split by lines and clean up each key
+        api_keys_list = []
+        for line in bulk_keys_text.split('\n'):
+            key = line.strip()
+            if key:  # Skip empty lines
+                api_keys_list.append(key)
+        
+        if not api_keys_list:
+            flash('❌ No valid API keys found', 'error')
+            return redirect(url_for('admin_api_keys'))
+        
+        # Get current highest api number for naming
+        existing_api_names = [key.key_name for key in APIKey.query.all() if key.key_name.startswith('api')]
+        max_num = 0
+        for name in existing_api_names:
+            try:
+                if name.startswith('api') and name[3:].isdigit():
+                    num = int(name[3:])
+                    max_num = max(max_num, num)
+            except:
+                continue
+        
+        added_count = 0
+        skipped_count = 0
+        errors = []
+        
+        for i, key_value in enumerate(api_keys_list):
+            try:
+                # Generate sequential name
+                key_name = f'api{max_num + i + 1}'
+                
+                # Check if key already exists
+                existing_key = APIKey.query.filter_by(key_value=key_value).first()
+                if existing_key:
+                    skipped_count += 1
+                    continue
+                
+                # Create new API key
+                api_key = APIKey()
+                api_key.key_name = key_name
+                api_key.key_value = key_value
+                api_key.daily_limit = bulk_daily_limit
+                api_key.total_credits = bulk_total_credits
+                api_key.status = APIKeyStatus.ACTIVE
+                
+                db.session.add(api_key)
+                added_count += 1
+                
+            except Exception as e:
+                errors.append(f'Key {i+1}: {str(e)}')
+        
+        try:
+            db.session.commit()
+            
+            # Create success message
+            success_msg = f'✅ Successfully imported {added_count} API keys'
+            if skipped_count > 0:
+                success_msg += f' (skipped {skipped_count} duplicates)'
+            
+            flash(success_msg, 'success')
+            
+            if errors:
+                flash(f'⚠️ Some errors occurred: {"; ".join(errors[:3])}', 'warning')
+                
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Database error: {str(e)}', 'error')
+        
+        return redirect(url_for('admin_api_keys'))
+    
     @app.route('/admin/api-keys/<int:key_id>/toggle')
     @admin_required
     def toggle_api_key(key_id):
