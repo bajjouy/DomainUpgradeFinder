@@ -37,6 +37,11 @@ def create_app():
     # Configure Stripe
     stripe.api_key = app.config['STRIPE_SECRET_KEY']
     
+    # Configure PayPal (Sandbox credentials for testing)
+    app.config['PAYPAL_CLIENT_ID'] = os.getenv('PAYPAL_CLIENT_ID', 'AeHNHxV_vMG8O8_Vs-QPHgmJbfHdHFRHSAYKP2dOZjVMy8ZVfz8E-GzuWDqJOPi4oUzXmKcV_f7qlE3m')
+    app.config['PAYPAL_CLIENT_SECRET'] = os.getenv('PAYPAL_CLIENT_SECRET', 'EO5sAflAvkuzDMVaJi2zCwomZILCFx6_YNrtKOzKXUqw8L_7A4lF8QhYDHjlSHRCyLqc8NxW_z1GhZmY')
+    app.config['PAYPAL_MODE'] = os.getenv('PAYPAL_MODE', 'sandbox')
+    
     # Initialize domain analyzer
     app.domain_analyzer = EnhancedDomainAnalyzer()
     
