@@ -44,15 +44,15 @@
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-4">
-                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'active')|list|length }}</h4>
+                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'ACTIVE')|list|length }}</h4>
                         <small class="text-success">Active</small>
                     </div>
                     <div class="col-4">
-                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'inactive')|list|length }}</h4>
+                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'INACTIVE')|list|length }}</h4>
                         <small class="text-warning">Inactive</small>
                     </div>
                     <div class="col-4">
-                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'failed')|list|length }}</h4>
+                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'FAILED')|list|length }}</h4>
                         <small class="text-danger">Failed</small>
                     </div>
                 </div>
@@ -124,8 +124,8 @@
                             <tr>
                                 <td>{{ key.key_name }}</td>
                                 <td>
-                                    <span class="badge bg-{{ 'success' if key.status.value == 'active' else 'warning' if key.status.value == 'inactive' else 'danger' }}">
-                                        {{ key.status.value.upper() }}
+                                    <span class="badge bg-{{ 'success' if key.status.value == 'ACTIVE' else 'warning' if key.status.value == 'INACTIVE' else 'danger' }}">
+                                        {{ key.status.value }}
                                     </span>
                                 </td>
                                 <td>
@@ -148,8 +148,8 @@
                                 </td>
                                 <td>
                                     <a href="{{ url_for('toggle_api_key', key_id=key.id) }}" 
-                                       class="btn btn-sm {{ 'btn-outline-danger' if key.status.value == 'active' else 'btn-outline-success' }}">
-                                        {{ 'Deactivate' if key.status.value == 'active' else 'Activate' }}
+                                       class="btn btn-sm {{ 'btn-outline-danger' if key.status.value == 'ACTIVE' else 'btn-outline-success' }}">
+                                        {{ 'Deactivate' if key.status.value == 'ACTIVE' else 'Activate' }}
                                     </a>
                                 </td>
                             </tr>
