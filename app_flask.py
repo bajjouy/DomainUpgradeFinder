@@ -611,7 +611,7 @@ def create_app():
     @app.route('/dashboard')
     @client_required
     def client_dashboard():
-        # Get user's search history
+        # Get user's search history (recent searches for activity display)
         recent_searches = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
             SearchHistory.created_at.desc()).limit(5).all()
         
@@ -619,19 +619,66 @@ def create_app():
         recent_transactions = CoinTransaction.query.filter_by(user_id=current_user.id).order_by(
             CoinTransaction.created_at.desc()).limit(5).all()
         
-        # Calculate total upgrade opportunities from recent searches
+        # Get all user's searches to calculate upkeywords
+        all_searches = SearchHistory.query.filter_by(user_id=current_user.id).all()
+        
+        # Calculate upkeywords (keywords with at least 1 upgrade)
+        upkeywords_dict = {}
         total_upgrades = 0
-        for search in recent_searches:
+        
+        for search in all_searches:
             results = search.get_results()
-            for result in results:
-                if result.get('Is_Upgrade', False):
-                    total_upgrades += 1
+            if results:
+                keyword = search.keywords
+                
+                # Track domain duplicates within this keyword to avoid counting same domain multiple times
+                domain_tracker = {}
+                keyword_upgrade_count = 0
+                total_competitors = 0
+                
+                for result in results:
+                    competitor_domain = result.get('Competitor_Domain', '')
+                    is_upgrade = result.get('Is_Upgrade', False)
+                    
+                    if competitor_domain:
+                        if competitor_domain not in domain_tracker:
+                            domain_tracker[competitor_domain] = {
+                                'is_upgrade': is_upgrade,
+                                'total_count': 1
+                            }
+                            total_competitors += 1
+                            if is_upgrade:
+                                keyword_upgrade_count += 1
+                                total_upgrades += 1
+                        else:
+                            # Domain already exists, just track if it's an upgrade (don't double count)
+                            if is_upgrade and not domain_tracker[competitor_domain]['is_upgrade']:
+                                domain_tracker[competitor_domain]['is_upgrade'] = True
+                                keyword_upgrade_count += 1
+                                total_upgrades += 1
+                
+                # Only include keywords that have upgrades
+                if keyword_upgrade_count > 0:
+                    if keyword in upkeywords_dict:
+                        # Merge with existing data (might have duplicate keywords from different searches)
+                        upkeywords_dict[keyword]['upgrade_count'] += keyword_upgrade_count
+                        upkeywords_dict[keyword]['total_competitors'] += total_competitors
+                    else:
+                        upkeywords_dict[keyword] = {
+                            'keyword': keyword,
+                            'upgrade_count': keyword_upgrade_count,
+                            'total_competitors': total_competitors
+                        }
+        
+        # Convert to list and sort by upgrade count (highest first)
+        upkeywords = sorted(upkeywords_dict.values(), key=lambda x: x['upgrade_count'], reverse=True)[:10]
         
         return render_template('client/dashboard.html',
                              user=current_user,
                              recent_searches=recent_searches,
                              recent_transactions=recent_transactions,
-                             total_upgrades=total_upgrades)
+                             total_upgrades=total_upgrades,
+                             upkeywords=upkeywords)
     
     @app.route('/search', methods=['GET', 'POST'])
     @client_required
@@ -768,7 +815,8 @@ def create_app():
                                 'Competitors': [],
                                 'Has_Upgrade': False,
                                 'Total_Competitors': 0,
-                                'Upgrade_Competitors': 0
+                                'Upgrade_Competitors': 0,
+                                'upkeyword': False  # Track if this keyword has upgrades for dashboard
                             }
                         
                         # Add competitor to this keyword group
@@ -778,6 +826,7 @@ def create_app():
                         # Track if this keyword group has any upgrade opportunities
                         if result.get('Is_Upgrade', False):
                             grouped[keyword]['Has_Upgrade'] = True
+                            grouped[keyword]['upkeyword'] = True  # Mark as having upgrades
                             grouped[keyword]['Upgrade_Competitors'] += 1
                     
                     return grouped
@@ -914,9 +963,12 @@ def create_app():
             # Process results with upgrade analysis and save to database in batches
             batch_histories = []
             for keywords, raw_results, api_key_used in bulk_results:
-                # IMPORTANT: Analyze raw results for upgrade opportunities
+                # IMPORTANT: Analyze raw results for upgrade opportunities with duplicate domain handling
                 analyzed_results = []
                 parsed_keywords = app.domain_analyzer.parse_keywords(keywords)
+                
+                # Track domains to handle duplicates at different ranks
+                domain_tracker = {}
                 
                 for result in raw_results:
                     competitor_domain = app.domain_analyzer.extract_domain_from_url(result['url'])
@@ -927,7 +979,7 @@ def create_app():
                         
                         # Include all results with match details
                         if match_result['match_count'] > 0:
-                            analyzed_results.append({
+                            result_data = {
                                 'Keywords': keywords,
                                 'Competitor_Domain': competitor_domain,
                                 'Search_Keywords': ', '.join(parsed_keywords),
@@ -937,7 +989,26 @@ def create_app():
                                 'Is_Upgrade': match_result['is_upgrade'],
                                 'Google_Rank': result['rank'],
                                 'Competitor_Title': result['title']
-                            })
+                            }
+                            
+                            # Handle duplicate domains - combine ranks
+                            if competitor_domain in domain_tracker:
+                                # Update existing entry with combined ranks
+                                existing_result = domain_tracker[competitor_domain]
+                                existing_ranks = str(existing_result['Google_Rank']).split(' and ')
+                                new_rank = str(result['rank'])
+                                
+                                if new_rank not in existing_ranks:
+                                    combined_ranks = existing_ranks + [new_rank]
+                                    # Sort ranks numerically and format
+                                    sorted_ranks = sorted([int(r.replace('#', '')) for r in combined_ranks if r.replace('#', '').isdigit()])
+                                    existing_result['Google_Rank'] = ' and '.join([f"#{r}" for r in sorted_ranks])
+                                    existing_result['Competitor_Title'] = result['title']  # Keep latest title
+                            else:
+                                # First occurrence of this domain
+                                result_data['Google_Rank'] = f"#{result['rank']}"
+                                domain_tracker[competitor_domain] = result_data
+                                analyzed_results.append(result_data)
                 
                 search_history = SearchHistory()
                 search_history.user_id = current_user.id
@@ -971,7 +1042,8 @@ def create_app():
                             'Competitors': [],
                             'Has_Upgrade': False,
                             'Total_Competitors': 0,
-                            'Upgrade_Competitors': 0
+                            'Upgrade_Competitors': 0,
+                            'upkeyword': False  # Track if this keyword has upgrades for dashboard
                         }
                     
                     # Add competitor to this keyword group
@@ -981,6 +1053,7 @@ def create_app():
                     # Track if this keyword group has any upgrade opportunities
                     if result.get('Is_Upgrade', False):
                         grouped[keyword]['Has_Upgrade'] = True
+                        grouped[keyword]['upkeyword'] = True  # Mark as having upgrades
                         grouped[keyword]['Upgrade_Competitors'] += 1
                 
                 return grouped
@@ -1408,7 +1481,8 @@ def create_app():
                         'Competitors': [],
                         'Has_Upgrade': False,
                         'Total_Competitors': 0,
-                        'Upgrade_Competitors': 0
+                        'Upgrade_Competitors': 0,
+                        'upkeyword': False  # Track if this keyword has upgrades for dashboard
                     }
                 
                 # Add competitor to this keyword group
@@ -1418,6 +1492,7 @@ def create_app():
                 # Track if this keyword group has any upgrade opportunities
                 if result.get('Is_Upgrade', False):
                     grouped[keyword]['Has_Upgrade'] = True
+                    grouped[keyword]['upkeyword'] = True  # Mark as having upgrades
                     grouped[keyword]['Upgrade_Competitors'] += 1
             
             return grouped
