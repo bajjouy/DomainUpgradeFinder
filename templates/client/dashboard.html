@@ -39,7 +39,7 @@
         <div class="card bg-success text-white">
             <div class="card-body text-center">
                 <i class="fas fa-chart-line fa-3x mb-2"></i>
-                <h3>{{ recent_searches|selectattr('get_results')|map('method', 'get_results')|map('selectattr', 'Is_Upgrade', 'equalto', true)|map('list')|map('length')|sum }}</h3>
+                <h3>{{ total_upgrades }}</h3>
                 <p>Upgrade Opportunities</p>
                 <a href="{{ url_for('search_history') }}" class="btn btn-light btn-sm">View Results</a>
             </div>
@@ -59,7 +59,7 @@
                     <div class="border-bottom mb-2 pb-2">
                         <strong>{{ search.keywords }}</strong><br>
                         <small class="text-muted">
-                            {{ search.get_results()|length }} results - {{ search.get_results()|selectattr('Is_Upgrade', 'equalto', true)|list|length }} upgrades
+                            {{ search.get_results()|length }} results - {{ search.get_results()|selectattr('Is_Upgrade')|list|length }} upgrades
                         </small>
                     </div>
                     {% endfor %}

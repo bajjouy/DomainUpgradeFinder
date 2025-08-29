@@ -254,10 +254,19 @@ def create_app():
         recent_transactions = CoinTransaction.query.filter_by(user_id=current_user.id).order_by(
             CoinTransaction.created_at.desc()).limit(5).all()
         
+        # Calculate total upgrade opportunities from recent searches
+        total_upgrades = 0
+        for search in recent_searches:
+            results = search.get_results()
+            for result in results:
+                if result.get('Is_Upgrade', False):
+                    total_upgrades += 1
+        
         return render_template('client/dashboard.html',
                              user=current_user,
                              recent_searches=recent_searches,
-                             recent_transactions=recent_transactions)
+                             recent_transactions=recent_transactions,
+                             total_upgrades=total_upgrades)
     
     @app.route('/search', methods=['GET', 'POST'])
     @client_required
