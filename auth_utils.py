@@ -1,6 +1,5 @@
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
-from models import User, UserRole
 from functools import wraps
 from flask import flash, redirect, url_for, current_app
 from flask_login import current_user
@@ -10,14 +9,16 @@ login_manager = LoginManager()
 
 @login_manager.user_loader
 def load_user(user_id):
+    from models import User
     return User.query.get(int(user_id))
 
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        from models import UserRole
         if not current_user.is_authenticated or current_user.role != UserRole.ADMIN:
             flash('Admin access required.', 'error')
-            return redirect(url_for('auth.login'))
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -26,7 +27,7 @@ def client_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             flash('Please log in to access this page.', 'error')
-            return redirect(url_for('auth.login'))
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
