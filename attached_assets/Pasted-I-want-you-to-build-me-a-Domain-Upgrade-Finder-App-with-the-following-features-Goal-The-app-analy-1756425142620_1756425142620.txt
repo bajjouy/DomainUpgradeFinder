@@ -1,0 +1,91 @@
+I want you to build me a Domain Upgrade Finder App with the following features:
+
+Goal
+
+The app analyzes my domain names and finds potential buyers by checking if my domains are upgrades of businesses that already rank on Google.
+
+Process / Workflow
+
+Input
+
+Upload or paste a list of domains (e.g., HoustonPlumberServices.com, AffordableConcreteServices.com).
+
+Keyword Extraction
+
+For each domain:
+
+Remove TLD (.com, .net, .org).
+
+Split the domain into keywords.
+
+Example: houstonplumberservices.com → houston plumber services.
+
+Must handle 2-keyword or 3-keyword domains properly.
+
+Google Search
+
+Search the exact keyword phrase on Google (in quotes).
+
+Collect only the first page results (top 10).
+
+Extract Competitor Domains
+
+From each Google result, extract the domain name / URL.
+
+Keyword Matching
+
+Check if all extracted keywords from my domain are present in the competitor’s domain URL.
+
+Word order does not matter, but all words must be included.
+
+Example:
+
+My domain: HoustonPlumberServices.com → houston plumber services.
+
+Competitor: serviceshoustonplumber.com ✅ (all keywords exist).
+
+Upgrade Domain Check
+
+If competitor’s domain contains all keywords, mark my domain as an upgrade.
+
+Output
+
+Save results in a table / CSV format:
+
+My Domain                  | Upgrade For
+------------------------------------------------
+HoustonPlumberServices.com | serviceshoustonplumber.com
+AffordableConcreteServices.com | bestaffordableconcreteservices.net
+
+
+Option to download results (CSV or Excel).
+
+Technical Notes
+
+The app must be fully automated.
+
+Must respect Google scraping limits (use Google Search API or scraping library like SerpAPI, Scrapy, BeautifulSoup, or Playwright).
+
+Frontend can be simple web app (React or Next.js) or desktop app (Python with Tkinter/Streamlit).
+
+Backend should handle:
+
+Keyword extraction
+
+Google search
+
+URL parsing
+
+Keyword matching
+
+CSV export
+
+Extra Features (if possible)
+
+Show number of matches found for each domain.
+
+Option to filter only domains with at least 1 upgrade match.
+
+Dashboard view with progress bar while searching.
+
+👉 Deliverable: A working app where I can upload my domains, run the search, and download a list of upgrade opportunities with target websites.
