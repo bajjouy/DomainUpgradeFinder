@@ -622,7 +622,7 @@ def create_app():
         # Get user's searches from last 24 hours to calculate upkeywords
         from datetime import timedelta
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
-        recent_searches = SearchHistory.query.filter(
+        recent_search_data = SearchHistory.query.filter(
             SearchHistory.user_id == current_user.id,
             SearchHistory.created_at >= twenty_four_hours_ago
         ).all()
@@ -631,7 +631,7 @@ def create_app():
         upkeywords_dict = {}
         total_upgrades = 0
         
-        for search in recent_searches:
+        for search in recent_search_data:
             results = search.get_results()
             if results:
                 keyword = search.keywords
