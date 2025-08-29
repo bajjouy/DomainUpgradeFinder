@@ -16,6 +16,7 @@ from config import Config
 from auth_utils import bcrypt, login_manager, admin_required, client_required, hash_password, check_password
 from api_rotation import EnhancedDomainAnalyzer
 from utils import parse_domain_list
+from paypal_integration import PayPalAPI
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -340,8 +341,8 @@ def create_app():
     @client_required
     def search():
         if request.method == 'POST':
-            # Check if user has enough coins
-            if current_user.coins < 1:
+            # Check if user has enough coins (skip for admin users)
+            if current_user.role != UserRole.ADMIN and current_user.coins < 1:
                 flash('You need at least 1 coin to perform a search. Please purchase more coins.', 'error')
                 return redirect(url_for('buy_coins'))
             
@@ -364,9 +365,9 @@ def create_app():
                 flash('Please enter valid keywords', 'error')
                 return render_template('client/search.html')
             
-            # Check if user has enough coins for all searches
+            # Check if user has enough coins for all searches (skip for admin users)
             total_searches = len(keyword_sets)
-            if current_user.coins < total_searches:
+            if current_user.role != UserRole.ADMIN and current_user.coins < total_searches:
                 flash(f'You need {total_searches} coins for this search but only have {current_user.coins} coins.', 'error')
                 return redirect(url_for('buy_coins'))
             
@@ -408,8 +409,8 @@ def create_app():
                 db.session.flush()
                 
                 for keywords in keyword_sets:
-                    # Deduct coin for this search
-                    if not current_user.deduct_coins(1, 'search'):
+                    # Deduct coin for this search (skip for admin users)
+                    if current_user.role != UserRole.ADMIN and not current_user.deduct_coins(1, 'search'):
                         flash('Insufficient coins', 'error')
                         break
                     
@@ -514,16 +515,17 @@ def create_app():
             # Parse keywords
             keyword_sets = parse_domain_list(search_session.keyword_list)
             
-            # Check and deduct coins upfront
+            # Check and deduct coins upfront (skip for admin users)
             total_cost = len(keyword_sets)
-            if current_user.coins < total_cost:
+            if current_user.role != UserRole.ADMIN and current_user.coins < total_cost:
                 search_session.status = 'failed'
                 db.session.commit()
                 return jsonify({'error': 'Insufficient coins'}), 400
             
-            # Deduct all coins at once
-            for _ in range(total_cost):
-                current_user.deduct_coins(1, 'bulk_search')
+            # Deduct all coins at once (skip for admin users)
+            if current_user.role != UserRole.ADMIN:
+                for _ in range(total_cost):
+                    current_user.deduct_coins(1, 'bulk_search')
             
             # Start processing timer
             processing_start = datetime.utcnow()
@@ -801,6 +803,69 @@ def create_app():
                 flash('Payment was not successful.', 'error')
         
         return redirect(url_for('client_dashboard'))
+    
+    @app.route('/create-paypal-payment', methods=['POST'])
+    @client_required
+    def create_paypal_payment():
+        package_id = request.json.get('package_id')
+        package = PricingPackage.query.get_or_404(package_id)
+        
+        # Check if PayPal is configured
+        if not current_app.config.get('PAYPAL_CLIENT_ID') or not current_app.config.get('PAYPAL_CLIENT_SECRET'):
+            return jsonify({'error': 'PayPal not configured'}), 400
+        
+        try:
+            paypal = PayPalAPI()
+            payment_result = paypal.create_payment(package, current_user)
+            
+            return jsonify({
+                'success': True,
+                'payment_id': payment_result['payment_id'],
+                'approval_url': payment_result['approval_url']
+            })
+            
+        except Exception as e:
+            logger.error(f"PayPal payment creation failed: {str(e)}")
+            return jsonify({'error': 'Failed to create PayPal payment'}), 400
+    
+    @app.route('/paypal-success')
+    @client_required 
+    def paypal_success():
+        payment_id = request.args.get('paymentId')
+        payer_id = request.args.get('PayerID')
+        
+        if not payment_id or not payer_id:
+            flash('Invalid PayPal callback parameters', 'error')
+            return redirect(url_for('buy_coins'))
+        
+        try:
+            paypal = PayPalAPI()
+            result = paypal.execute_payment(payment_id, payer_id)
+            
+            if result['success']:
+                # Add coins to user account
+                coins = result['coins']
+                current_user.add_coins(coins, 'paypal_purchase')
+                db.session.commit()
+                
+                # Log the transaction
+                logger.info(f"PayPal payment successful: User {current_user.id} purchased {coins} coins")
+                
+                flash(f'PayPal payment successful! {coins} coins added to your account.', 'success')
+            else:
+                flash(f'PayPal payment failed: {result.get("message", "Unknown error")}', 'error')
+                
+        except Exception as e:
+            logger.error(f"PayPal payment execution failed: {str(e)}")
+            flash('PayPal payment processing failed', 'error')
+        
+        return redirect(url_for('client_dashboard'))
+    
+    @app.route('/paypal-cancel')
+    @client_required
+    def paypal_cancel():
+        flash('PayPal payment was cancelled', 'warning')
+        return redirect(url_for('buy_coins'))
     
     # Manual Payment Routes
     @app.route('/request-manual-payment', methods=['POST'])

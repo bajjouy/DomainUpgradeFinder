@@ -41,7 +41,7 @@
                                 <i class="fas fa-credit-card"></i> Pay with {{ method.name }}
                             </button>
                         {% elif method.method_type.value == 'PAYPAL' %}
-                            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#paypalModal{{ package.id }}{{ method.id }}">
+                            <button class="btn btn-outline-info" onclick="createPayPalPayment({{ package.id }}, '{{ package.name }}')">
                                 <i class="fas fa-paypal"></i> Pay with {{ method.name }}
                             </button>
                         {% endif %}
@@ -216,6 +216,46 @@ function buyPackage(packageId, packageName, priceInCents) {
     .catch(error => {
         console.error('Error:', error);
         alert('Payment error: ' + error.message);
+    });
+}
+
+// PayPal payment function
+function createPayPalPayment(packageId, packageName) {
+    // Show loading state
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Payment...';
+    button.disabled = true;
+    
+    fetch('/create-paypal-payment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            package_id: packageId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.approval_url) {
+            // Redirect to PayPal for payment approval
+            window.location.href = data.approval_url;
+        } else {
+            alert('Error creating PayPal payment: ' + (data.error || 'Unknown error'));
+            
+            // Reset button
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating PayPal payment');
+        
+        // Reset button
+        button.innerHTML = originalText;
+        button.disabled = false;
     });
 }
 </script>
