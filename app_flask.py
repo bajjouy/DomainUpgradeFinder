@@ -372,8 +372,18 @@ def create_app():
             
             # For bulk processing, redirect to processor
             if total_searches > 10:  # Use bulk processing for more than 10 keywords
-                session['pending_keywords'] = keywords_input
-                session['pending_total'] = total_searches
+                # Create search session immediately to avoid large session cookies
+                search_session = SearchSession()
+                search_session.user_id = current_user.id
+                search_session.total_keywords = total_searches
+                search_session.keyword_list = keywords_input
+                search_session.status = 'pending'
+                
+                db.session.add(search_session)
+                db.session.commit()
+                
+                # Store only the session ID (much smaller)
+                session['pending_session_id'] = search_session.id
                 return redirect(url_for('bulk_search_processor'))
             
             # Regular processing for small searches
@@ -422,10 +432,8 @@ def create_app():
                 # Filter results for UI display (only show upgrade opportunities) 
                 upgrade_results = [r for r in all_results if r.get('Is_Upgrade', False)] if all_results else []
                 
-                # Store search ID for downloads
-                latest_search = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
-                    SearchHistory.created_at.desc()).first()
-                session['latest_search_id'] = latest_search.id if latest_search else None
+                # Store search session ID for downloads (much smaller than full data)
+                session['latest_session_id'] = search_session.id
                 
                 # Calculate counts
                 total_count = len(all_results) if all_results else 0
@@ -461,25 +469,25 @@ def create_app():
     @app.route('/bulk-search-processor')
     @client_required
     def bulk_search_processor():
-        keywords_input = session.get('pending_keywords', '')
-        total_keywords = session.get('pending_total', 0)
+        session_id = session.get('pending_session_id')
         
-        if not keywords_input or not total_keywords:
+        if not session_id:
             flash('Invalid search parameters', 'error')
             return redirect(url_for('search'))
         
+        # Get search session from database
+        search_session = SearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id, status='pending').first()
+        
+        if not search_session:
+            flash('Search session not found or already processed', 'error')
+            return redirect(url_for('search'))
+        
         # Clear session data
-        session.pop('pending_keywords', None)
-        session.pop('pending_total', None)
+        session.pop('pending_session_id', None)
         
-        # Create search session
-        search_session = SearchSession()
-        search_session.user_id = current_user.id
-        search_session.total_keywords = total_keywords
-        search_session.keyword_list = keywords_input
+        # Update status to processing
         search_session.status = 'processing'
-        
-        db.session.add(search_session)
         db.session.commit()
         
         return render_template('client/bulk_processor.html', session_id=search_session.id)
@@ -617,7 +625,7 @@ def create_app():
     @client_required
     def download_results(format, session_id=None):
         # Get results from the most recent search or specific session
-        search_id = session.get('latest_search_id')
+        search_id = session.get('latest_session_id')
         if not session_id:
             session_id = request.args.get('session_id')
         
@@ -633,13 +641,20 @@ def create_app():
             recent_searches = SearchHistory.query.filter_by(
                 session_id=session_id, user_id=current_user.id).all()
         else:
-            # Get from latest search
+            # Get from latest session
             if not search_id:
                 flash('No recent search results to download', 'error')
                 return redirect(url_for('search'))
             
-            recent_searches = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
-                SearchHistory.created_at.desc()).limit(10).all()
+            # Get search session
+            search_session = SearchSession.query.filter_by(
+                id=search_id, user_id=current_user.id).first()
+            if not search_session:
+                flash('Search session not found', 'error')
+                return redirect(url_for('search'))
+            
+            recent_searches = SearchHistory.query.filter_by(
+                session_id=search_session.id, user_id=current_user.id).all()
         
         # Compile ALL results (including non-upgrade opportunities)
         results = []

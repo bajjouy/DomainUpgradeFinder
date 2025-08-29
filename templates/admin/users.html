@@ -108,7 +108,7 @@
                                         
                                         <form method="POST" action="{{ url_for('toggle_user_status', user_id=user.id) }}" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if user.user_active else 'success' }}" 
-                                                    onclick="return confirm('Are you sure you want to {{ 'deactivate' if user.user_active else 'activate' }} this user?')">
+                                                    onclick="return window.confirm('Are you sure you want to {{ 'deactivate' if user.user_active else 'activate' }} this user?')">
                                                 <i class="fas fa-{{ 'pause' if user.user_active else 'play' }}"></i> {{ 'Deactivate' if user.user_active else 'Activate' }}
                                             </button>
                                         </form>
@@ -250,7 +250,7 @@ function validatePassword(userId) {
         return false;
     }
     
-    return confirm('Are you sure you want to change this user\'s password?');
+    return window.confirm('Are you sure you want to change this user\'s password?');
 }
 
 function confirmDelete(userId) {
