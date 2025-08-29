@@ -644,15 +644,12 @@ def create_app():
             
             # Get input
             keywords_input = request.form.get('keywords', '').strip()
-            max_results = int(request.form.get('max_results', 10))
+            # Use adaptive max_results - start with 100, reduce by 10 if fails
+            max_results = 100  # Will be adaptive per search
             
             if not keywords_input:
                 flash('Please enter keywords to search', 'error')
                 return render_template('client/search.html')
-            
-            # Validate max_results range
-            if max_results < 10 or max_results > 100:
-                max_results = 10
             
             # Parse keywords (one set per line)
             keyword_sets = parse_domain_list(keywords_input)
@@ -681,7 +678,7 @@ def create_app():
                 search_session.total_keywords = total_searches
                 search_session.keyword_list = keywords_input
                 search_session.status = 'pending'
-                search_session.max_results = max_results  # Store max results setting
+                search_session.max_results = 100  # Store starting max results (will be adaptive)
                 
                 db.session.add(search_session)
                 db.session.commit()
@@ -700,20 +697,45 @@ def create_app():
                 search_session.total_keywords = total_searches
                 search_session.keyword_list = keywords_input
                 search_session.status = 'processing'
-                search_session.max_results = max_results  # Store max results setting
+                search_session.max_results = 100  # Store starting max results (will be adaptive)
                 db.session.add(search_session)
                 db.session.flush()
                 
+                def adaptive_search(keywords):
+                    """Try search with reducing max_results: 100, 90, 80, 70, etc."""
+                    for attempt_results in range(100, 9, -10):  # 100, 90, 80, 70, 60, 50, 40, 30, 20, 10
+                        try:
+                            print(f"DEBUG: Trying search with max_results={attempt_results} for keywords: {keywords}")
+                            search_start = datetime.utcnow()
+                            results, api_key_used = app.domain_analyzer.analyze_keywords(keywords, max_results=attempt_results)
+                            search_duration = (datetime.utcnow() - search_start).total_seconds()
+                            
+                            # If we get results or no error, return success
+                            print(f"DEBUG: Search successful with max_results={attempt_results}, found {len(results) if results else 0} results")
+                            return results, api_key_used, search_duration, attempt_results
+                            
+                        except Exception as e:
+                            print(f"DEBUG: Search failed with max_results={attempt_results}, error: {str(e)}")
+                            if attempt_results <= 10:  # Last attempt
+                                raise e  # Re-raise the last error
+                            continue  # Try with fewer results
+                    
+                    # If we get here, all attempts failed
+                    raise Exception("All adaptive search attempts failed")
+
                 for keywords in keyword_sets:
                     # Deduct coin for this search (skip for admin users)
                     if current_user.role != UserRole.ADMIN and not current_user.deduct_coins(1, 'search'):
                         flash('Insufficient coins', 'error')
                         break
                     
-                    # Perform search with user-specified max results
-                    search_start = datetime.utcnow()
-                    results, api_key_used = app.domain_analyzer.analyze_keywords(keywords, max_results=max_results)
-                    search_duration = (datetime.utcnow() - search_start).total_seconds()
+                    # Perform adaptive search
+                    try:
+                        results, api_key_used, search_duration, used_max_results = adaptive_search(keywords)
+                        print(f"DEBUG: Final search completed with max_results={used_max_results}")
+                    except Exception as e:
+                        print(f"DEBUG: All adaptive search attempts failed for keywords '{keywords}': {str(e)}")
+                        results, api_key_used, search_duration = [], None, 0.0
                     
                     # Save search history linked to session
                     search_history = SearchHistory()
@@ -833,12 +855,33 @@ def create_app():
                 search_session.current_keyword = current_keyword
                 db.session.commit()
             
-            # Use bulk search with progress tracking and user-specified max results
-            max_results = search_session.max_results or 10  # Use saved max_results or default to 10
-            print(f"DEBUG: About to start bulk search with {len(keyword_sets)} keyword sets, max_results={max_results}")
-            bulk_results = app.domain_analyzer.api_manager.search_google_bulk(
-                keyword_sets, progress_callback=update_progress, max_results=max_results
-            )
+            # Use bulk search with adaptive max results
+            def adaptive_bulk_search():
+                """Try bulk search with reducing max_results: 100, 90, 80, 70, etc."""
+                for attempt_results in range(100, 9, -10):  # 100, 90, 80, 70, 60, 50, 40, 30, 20, 10
+                    try:
+                        print(f"DEBUG: Trying bulk search with max_results={attempt_results}")
+                        bulk_results = app.domain_analyzer.api_manager.search_google_bulk(
+                            keyword_sets, progress_callback=update_progress, max_results=attempt_results
+                        )
+                        print(f"DEBUG: Bulk search successful with max_results={attempt_results}, got {len(bulk_results)} results")
+                        return bulk_results, attempt_results
+                        
+                    except Exception as e:
+                        print(f"DEBUG: Bulk search failed with max_results={attempt_results}, error: {str(e)}")
+                        if attempt_results <= 10:  # Last attempt
+                            raise e  # Re-raise the last error
+                        continue  # Try with fewer results
+                
+                # If we get here, all attempts failed
+                raise Exception("All adaptive bulk search attempts failed")
+            
+            try:
+                bulk_results, used_max_results = adaptive_bulk_search()
+                print(f"DEBUG: Final bulk search completed with max_results={used_max_results}")
+            except Exception as e:
+                print(f"DEBUG: All adaptive bulk search attempts failed: {str(e)}")
+                bulk_results = []
             print(f"DEBUG: Bulk search completed, got {len(bulk_results)} results")
             
             # Process results with upgrade analysis and save to database in batches

@@ -33,20 +33,6 @@
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="max_results" class="form-label">Google Results to Check</label>
-                        <select class="form-select" id="max_results" name="max_results">
-                            <option value="10" selected>10 results (fastest)</option>
-                            <option value="20">20 results</option>
-                            <option value="30">30 results</option>
-                            <option value="50">50 results</option>
-                            <option value="100">100 results (comprehensive)</option>
-                        </select>
-                        <div class="form-text">
-                            <i class="fas fa-info-circle"></i> 
-                            More results = better coverage but slower processing. Each keyword still costs 1 coin regardless of result count.
-                        </div>
-                    </div>
                     
                     {% if current_user.coins > 0 %}
                     <button type="submit" class="btn btn-primary w-100" id="searchBtn">
