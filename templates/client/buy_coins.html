@@ -128,7 +128,7 @@
                                 {% if method.paypal_instructions %}
                                 <hr>
                                 <div class="small text-muted">
-                                    {{ method.paypal_instructions|nl2br }}
+                                    {{ method.paypal_instructions|replace('\n', '<br>')|safe }}
                                 </div>
                                 {% endif %}
                             </div>
