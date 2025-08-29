@@ -72,4 +72,46 @@
         </div>
     </div>
 </div>
+
+<!-- Contact Section -->
+<div class="row mt-5 py-5 bg-light">
+    <div class="col-lg-8 mx-auto text-center">
+        <h3 class="mb-4"><i class="fas fa-envelope text-primary"></i> Need Help? Contact Us!</h3>
+        <p class="lead text-muted mb-4">Have questions about Domain Upgrade Pro? Our team is here to help you succeed.</p>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <i class="fas fa-envelope fa-2x text-primary mb-3"></i>
+                        <h5>Email Support</h5>
+                        <p class="text-muted">Get detailed assistance via email</p>
+                        <a href="mailto:bajjouyounes@gmail.com" class="btn btn-primary">
+                            <i class="fas fa-envelope"></i> Email Us
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <i class="fab fa-whatsapp fa-2x text-success mb-3"></i>
+                        <h5>WhatsApp Support</h5>
+                        <p class="text-muted">Quick help for urgent questions</p>
+                        <a href="https://wa.me/212699095328?text=Hello%20Domain%20Upgrade%20Pro%20team,%20I%20need%20assistance%20with..." 
+                           target="_blank" class="btn btn-success">
+                            <i class="fab fa-whatsapp"></i> Chat Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <a href="{{ url_for('contact') }}" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-paper-plane"></i> Send us a Message
+            </a>
+        </div>
+    </div>
+</div>
 {% endblock %}
