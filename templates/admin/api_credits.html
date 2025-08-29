@@ -185,7 +185,7 @@
                                             {{ "%.1f"|format(key.credits_percentage) }}%
                                         </div>
                                     </div>
-                                    <small>{{ key.remaining_credits:,g }} / {{ key.total_credits:,g }}</small>
+                                    <small>{{ "{:,.0f}".format(key.remaining_credits) }} / {{ "{:,.0f}".format(key.total_credits) }}</small>
                                 </td>
                                 <td>
                                     <div>
