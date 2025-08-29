@@ -22,7 +22,7 @@ args = "install_dependencies"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Domain Upgrade SaaS"
+args = "Domain Upgrade Pro SaaS"
 
 [[workflows.workflow]]
 name = "install_dependencies"
@@ -33,7 +33,7 @@ task = "shell.exec"
 args = "uv add requests openpyxl"
 
 [[workflows.workflow]]
-name = "Domain Upgrade SaaS"
+name = "Domain Upgrade Pro SaaS"
 author = "agent"
 
 [[workflows.workflow.tasks]]
