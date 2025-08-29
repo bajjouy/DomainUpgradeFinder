@@ -28,7 +28,7 @@
                     </div>
                     
                     {% if current_user.coins > 0 %}
-                    <button type="submit" class="btn btn-primary w-100">
+                    <button type="submit" class="btn btn-primary w-100" id="searchBtn">
                         <i class="fas fa-search"></i> Start Search
                     </button>
                     {% else %}
@@ -63,12 +63,33 @@
     </div>
 </div>
 
+<!-- Progress Section -->
+<div class="row mt-4" id="progressSection" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-spinner fa-spin"></i> Searching...</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" role="progressbar" 
+                         style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                <div id="progressText">Preparing search...</div>
+                <div class="mt-2">
+                    <small class="text-muted">Processing: <span id="currentKeyword">-</span></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if show_results and results %}
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between">
-                <h5><i class="fas fa-chart-line"></i> Search Results ({{ results|length }} opportunities found)</h5>
+                <h5><i class="fas fa-chart-line"></i> Upgrade Opportunities ({{ upgrade_count }} found, {{ total_results }} total results)</h5>
                 <div>
                     <a href="{{ url_for('download_results', format='csv') }}" class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-download"></i> CSV
@@ -93,7 +114,8 @@
                         </thead>
                         <tbody>
                             {% for result in results %}
-                            <tr class="{{ 'table-success' if result.Is_Upgrade else '' }}">
+                            {% if result.Is_Upgrade %}
+                            <tr class="table-success">
                                 <td>{{ result.Keywords }}</td>
                                 <td>
                                     <a href="http://{{ result.Competitor_Domain }}" target="_blank">
@@ -104,20 +126,67 @@
                                 <td>{{ result.Match_Count }}/{{ result.Total_Keywords }}</td>
                                 <td>{{ result.Google_Rank }}</td>
                                 <td>
-                                    {% if result.Is_Upgrade %}
-                                        <span class="badge bg-success">Yes</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Partial</span>
-                                    {% endif %}
+                                    <span class="badge bg-success">Yes</span>
                                 </td>
                             </tr>
+                            {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                
+                {% if upgrade_count == 0 and total_results > 0 %}
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>No perfect upgrade opportunities found.</strong> 
+                    We found {{ total_results }} potential matches, but none were clear upgrade opportunities. 
+                    You can download the full results to review partial matches.
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 {% endif %}
+
+<script>
+document.getElementById('searchBtn')?.addEventListener('click', function(e) {
+    const form = this.closest('form');
+    const keywords = form.querySelector('#keywords').value.trim();
+    
+    if (!keywords) return;
+    
+    // Count keyword sets
+    const keywordSets = keywords.split('\n').filter(line => line.trim());
+    const totalKeywords = keywordSets.length;
+    
+    // Show progress section
+    document.getElementById('progressSection').style.display = 'block';
+    
+    // Disable the search button
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+    
+    // Simulate progress (since this is synchronous)
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const currentKeyword = document.getElementById('currentKeyword');
+    
+    // Update progress text
+    progressText.textContent = `Searching ${totalKeywords} keyword set${totalKeywords > 1 ? 's' : ''}...`;
+    
+    // Show keywords being processed
+    keywordSets.forEach((keyword, index) => {
+        setTimeout(() => {
+            currentKeyword.textContent = keyword;
+            progress = Math.round(((index + 1) / totalKeywords) * 100);
+            progressBar.style.width = progress + '%';
+            progressBar.setAttribute('aria-valuenow', progress);
+            progressBar.textContent = progress + '%';
+        }, index * 1000); // Show each keyword for 1 second
+    });
+});
+</script>
+
 {% endblock %}

@@ -315,13 +315,31 @@ def create_app():
                 db.session.commit()
                 
                 if all_results:
-                    # Store results in session for download
-                    session['last_search_results'] = all_results
-                    flash(f'Search completed! Found {len(all_results)} potential opportunities.', 'success')
+                    # Filter results for UI display (only show upgrade opportunities)
+                    upgrade_results = [r for r in all_results if r.get('Is_Upgrade', False)]
+                    
+                    # Store search ID for downloads instead of full data in session
+                    latest_search = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
+                        SearchHistory.created_at.desc()).first()
+                    session['latest_search_id'] = latest_search.id if latest_search else None
+                    
+                    # Show success message based on upgrade opportunities
+                    total_count = len(all_results)
+                    upgrade_count = len(upgrade_results)
+                    
+                    if upgrade_count > 0:
+                        flash(f'Search completed! Found {upgrade_count} upgrade opportunities out of {total_count} total results.', 'success')
+                    else:
+                        flash(f'Search completed! Found {total_count} potential matches but no clear upgrade opportunities.', 'info')
+                    
+                    return render_template('client/search.html', 
+                                         results=upgrade_results, 
+                                         show_results=True,
+                                         upgrade_count=upgrade_count,
+                                         total_results=total_count)
                 else:
-                    flash('No upgrade opportunities found for your keywords.', 'info')
-                
-                return render_template('client/search.html', results=all_results, show_results=True)
+                    flash('No results found for your keywords.', 'info')
+                    return render_template('client/search.html')
                 
             except Exception as e:
                 flash(f'Search error: {str(e)}', 'error')
@@ -332,7 +350,21 @@ def create_app():
     @app.route('/download/<format>')
     @client_required
     def download_results(format):
-        results = session.get('last_search_results', [])
+        # Get results from the most recent search
+        search_id = session.get('latest_search_id')
+        if not search_id:
+            flash('No recent search results to download', 'error')
+            return redirect(url_for('search'))
+        
+        # Get all results from recent searches for this user
+        recent_searches = SearchHistory.query.filter_by(user_id=current_user.id).order_by(
+            SearchHistory.created_at.desc()).limit(10).all()
+        
+        results = []
+        for search in recent_searches:
+            search_results = search.get_results()
+            if search_results:
+                results.extend(search_results)
         
         if not results:
             flash('No search results to download', 'error')
