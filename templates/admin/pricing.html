@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-tags"></i> Pricing Management</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Add New Pricing Package</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_pricing_package') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Package Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required placeholder="e.g., Starter Pack">
+                    </div>
+                    <div class="mb-3">
+                        <label for="coins" class="form-label">Number of Coins</label>
+                        <input type="number" class="form-control" id="coins" name="coins" required min="1" placeholder="100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="price" class="form-label">Price (USD)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" class="form-control" id="price" name="price" required min="0.01" placeholder="10.00">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Package</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Pricing Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4>{{ packages|length }}</h4>
+                        <small class="text-primary">Total Packages</small>
+                    </div>
+                    <div class="col-4">
+                        <h4>{{ packages|selectattr('is_active')|list|length }}</h4>
+                        <small class="text-success">Active</small>
+                    </div>
+                    <div class="col-4">
+                        <h4>${{ "%.2f"|format((packages|map(attribute='price_cents')|sum / 100) if packages else 0) }}</h4>
+                        <small class="text-warning">Total Value</small>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>Price per Coin Analysis</h6>
+                    {% for package in packages %}
+                    <div class="d-flex justify-content-between">
+                        <span>{{ package.name }}:</span>
+                        <span>${{ "%.3f"|format(package.price_dollars / package.coins) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Current Pricing Packages</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Package Name</th>
+                                <th>Coins</th>
+                                <th>Price</th>
+                                <th>Price per Coin</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for package in packages %}
+                            <tr>
+                                <td><strong>{{ package.name }}</strong></td>
+                                <td>{{ package.coins }}</td>
+                                <td>${{ "%.2f"|format(package.price_dollars) }}</td>
+                                <td>${{ "%.3f"|format(package.price_dollars / package.coins) }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if package.is_active else 'secondary' }}">
+                                        {{ 'Active' if package.is_active else 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td>{{ package.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="togglePackage({{ package.id }})">
+                                        {{ 'Deactivate' if package.is_active else 'Activate' }}
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-lightbulb"></i> Pricing Strategy Tips</h5>
+            <ul class="mb-0">
+                <li>Offer bulk discounts to encourage larger purchases</li>
+                <li>The "Professional Pack" is marked as most popular by default</li>
+                <li>Consider seasonal promotions and limited-time offers</li>
+                <li>Monitor competitor pricing and adjust accordingly</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePackage(packageId) {
+    if (confirm('Are you sure you want to toggle this package status?')) {
+        window.location.href = '/admin/pricing/' + packageId + '/toggle';
+    }
+}
+</script>
+{% endblock %}

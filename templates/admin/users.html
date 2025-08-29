@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-users"></i> User Management</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>User Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4>{{ users|length }}</h4>
+                        <small class="text-primary">Total Users</small>
+                    </div>
+                    <div class="col-6">
+                        <h4>{{ users|selectattr('user_active')|list|length }}</h4>
+                        <small class="text-success">Active Users</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Tip:</strong> You can adjust user coin balances directly from this page. Use positive numbers to add coins, negative to deduct.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>All Users</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Coins</th>
+                                <th>Status</th>
+                                <th>Registered</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'primary' if user.role.value == 'CLIENT' else 'warning' }}">
+                                        {{ user.role.value }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong>{{ user.coins }}</strong>
+                                    {% if not user.trial_coins_used %}
+                                        <small class="text-muted">(Trial)</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if user.user_active else 'danger' }}">
+                                        {{ 'Active' if user.user_active else 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ user.created_at.strftime('%Y-%m-%d') }}
+                                </td>
+                                <td>
+                                    {% if user.last_login %}
+                                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#adjustCoinsModal{{ user.id }}">
+                                        <i class="fas fa-coins"></i> Adjust Coins
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <!-- Adjust Coins Modal -->
+                            <div class="modal fade" id="adjustCoinsModal{{ user.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Adjust Coins for {{ user.email }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('adjust_user_coins', user_id=user.id) }}">
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Current Balance: <strong>{{ user.coins }} coins</strong></label>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="amount{{ user.id }}" class="form-label">Amount to Add/Deduct</label>
+                                                    <input type="number" class="form-control" id="amount{{ user.id }}" name="amount" required>
+                                                    <div class="form-text">Use positive numbers to add coins, negative to deduct</div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="reason{{ user.id }}" class="form-label">Reason (Optional)</label>
+                                                    <input type="text" class="form-control" id="reason{{ user.id }}" name="reason" placeholder="Admin adjustment">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Update Coins</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

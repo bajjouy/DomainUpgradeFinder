@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Search History{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-history"></i> Search History</h2>
+        <p class="text-muted">View all your previous keyword searches and results.</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h5>Your Search History</h5>
+                <div>
+                    <span class="badge bg-info">Total Searches: {{ searches.total }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if searches.items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Keywords</th>
+                                    <th>Results Found</th>
+                                    <th>API Key Used</th>
+                                    <th>Duration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for search in searches.items %}
+                                <tr>
+                                    <td>{{ search.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <strong>{{ search.keywords }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ search.get_results()|length }} results</span>
+                                    </td>
+                                    <td>
+                                        {% if search.api_key_used %}
+                                            <small class="text-muted">{{ search.api_key_used }}</small>
+                                        {% else %}
+                                            <small class="text-muted">N/A</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if search.search_duration %}
+                                            {{ "%.2f"|format(search.search_duration) }}s
+                                        {% else %}
+                                            <small class="text-muted">N/A</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewResultsModal{{ search.id }}">
+                                            <i class="fas fa-eye"></i> View Results
+                                        </button>
+                                    </td>
+                                </tr>
+                                
+                                <!-- View Results Modal -->
+                                <div class="modal fade" id="viewResultsModal{{ search.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Results for: {{ search.keywords }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                {% set results = search.get_results() %}
+                                                {% if results %}
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Domain</th>
+                                                                    <th>Matched Keywords</th>
+                                                                    <th>Google Rank</th>
+                                                                    <th>Upgrade?</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% for result in results %}
+                                                                <tr class="{{ 'table-success' if result.Is_Upgrade else '' }}">
+                                                                    <td>
+                                                                        <a href="http://{{ result.Competitor_Domain }}" target="_blank">
+                                                                            {{ result.Competitor_Domain }}
+                                                                        </a>
+                                                                    </td>
+                                                                    <td>{{ result.Matched_Keywords }}</td>
+                                                                    <td>{{ result.Google_Rank }}</td>
+                                                                    <td>
+                                                                        {% if result.Is_Upgrade %}
+                                                                            <span class="badge bg-success">Yes</span>
+                                                                        {% else %}
+                                                                            <span class="badge bg-secondary">Partial</span>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                {% else %}
+                                                    <p class="text-muted">No results found for this search.</p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if searches.pages > 1 %}
+                    <nav aria-label="Search history pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if searches.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('search_history', page=searches.prev_num) }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in searches.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != searches.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('search_history', page=page_num) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if searches.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('search_history', page=searches.next_num) }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                {% else %}
+                    <div class="text-center">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5>No Search History</h5>
+                        <p class="text-muted">You haven't performed any searches yet.</p>
+                        <a href="{{ url_for('search') }}" class="btn btn-primary">Start Your First Search</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
