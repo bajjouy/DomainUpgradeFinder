@@ -365,8 +365,12 @@ def create_app():
                     
                     db.session.commit()
                     
-                    # Redirect to the search session page
-                    return redirect(url_for('view_search_session', session_id=search_session.id))
+                    # Show results directly on search page instead of redirect
+                    return render_template('client/search.html', 
+                                         show_results=True,
+                                         results=upgrade_results,
+                                         total_results=total_count,
+                                         upgrade_count=upgrade_count)
                 else:
                     flash('No results found for your keywords.', 'info')
                     return render_template('client/search.html')
