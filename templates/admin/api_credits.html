@@ -54,6 +54,73 @@
     </div>
 </div>
 
+<!-- Live Credit Check Results -->
+<div id="live-credit-results" class="row mb-4" style="display: none;">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-spinner fa-spin"></i> Checking Live Credits...</h6>
+            <div id="live-credit-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Credit Keys (< 500) -->
+{% set low_keys = [] %}
+{% for key in api_keys %}
+    {% if key.status.value == 'ACTIVE' and key.remaining_credits < 500 %}
+        {% set _ = low_keys.append(key) %}
+    {% endif %}
+{% endfor %}
+
+{% if low_keys %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5><i class="fas fa-exclamation-triangle"></i> ⚠️ Low Credit API Keys (< 500 credits)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Key Name</th>
+                                <th>Credits Remaining</th>
+                                <th>Usage Progress</th>
+                                <th>Action Needed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for key in low_keys %}
+                            <tr class="table-danger">
+                                <td><strong>{{ key.key_name }}</strong></td>
+                                <td>{{ key.remaining_credits:,g }} / {{ key.total_credits:,g }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-danger" 
+                                             style="width: {{ key.credits_percentage }}%">
+                                            {{ "%.1f"|format(key.credits_percentage) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning text-dark">Replace Soon</span>
+                                    <button class="btn btn-sm btn-outline-danger ms-1" 
+                                            onclick="checkLiveCredits('{{ key.key_name }}', '{{ key.id }}')">
+                                        <i class="fas fa-sync-alt"></i> Check Live
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Low Credit Alerts -->
 {% if low_credit_keys %}
 <div class="row mb-4">
@@ -141,15 +208,21 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <form method="POST" action="{{ url_for('update_api_credits', key_id=key.id) }}" class="d-inline">
-                                        <div class="input-group input-group-sm" style="width: 120px;">
-                                            <input type="number" class="form-control" name="total_credits" 
-                                                   value="{{ key.total_credits }}" min="0" max="1000000">
-                                            <button type="submit" class="btn btn-outline-primary btn-sm">
-                                                <i class="fas fa-save"></i>
-                                            </button>
-                                        </div>
-                                    </form>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-info btn-sm" 
+                                                onclick="checkLiveCredits('{{ key.key_name }}', '{{ key.id }}')">
+                                            <i class="fas fa-sync-alt"></i> Check Live
+                                        </button>
+                                        <form method="POST" action="{{ url_for('update_api_credits', key_id=key.id) }}" class="d-inline">
+                                            <div class="input-group input-group-sm" style="width: 100px;">
+                                                <input type="number" class="form-control" name="total_credits" 
+                                                       value="{{ key.total_credits }}" min="0" max="1000000">
+                                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-save"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -195,4 +268,53 @@
         </div>
     </div>
 </div>
+
+<script>
+function checkLiveCredits(keyName, keyId) {
+    const resultsDiv = document.getElementById('live-credit-results');
+    const contentDiv = document.getElementById('live-credit-content');
+    
+    // Show loading
+    resultsDiv.style.display = 'block';
+    contentDiv.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Checking live credits for <strong>${keyName}</strong>...</p>`;
+    
+    // Make API call to check single key
+    fetch(`/admin/api-credits/${keyId}/check-live`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error checking ${keyName}:</strong> ${data.error}
+                </div>
+            `;
+        } else {
+            const statusClass = data.credits_left < 500 ? 'danger' : (data.credits_left < 1000 ? 'warning' : 'success');
+            contentDiv.innerHTML = `
+                <div class="alert alert-${statusClass}">
+                    <h6><strong>${keyName}</strong> Live Status:</h6>
+                    <ul>
+                        <li><strong>Credits Remaining:</strong> ${data.credits_left.toLocaleString()}</li>
+                        <li><strong>Plan:</strong> ${data.plan}</li>
+                        <li><strong>Status:</strong> ${data.credits_left < 500 ? '🚨 Critical - Replace Soon' : (data.credits_left < 1000 ? '⚠️ Low - Monitor Closely' : '✅ Good')}</li>
+                    </ul>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('live-credit-results').style.display='none'">Close</button>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        contentDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>Network Error:</strong> Could not check ${keyName}. ${error.message}
+            </div>
+        `;
+    });
+}
+</script>
 {% endblock %}

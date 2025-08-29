@@ -26,9 +26,17 @@ def check_serper_credits(api_key: str) -> Dict:
             data = response.json()
             # Serper API returns 'balance' instead of 'credits_left'
             balance = data.get('balance', 0)
+            # Estimate total based on common Serper plans
+            if balance <= 2500:
+                estimated_total = 2500  # Free plan
+            elif balance <= 10000:
+                estimated_total = max(balance + 500, 5000)  # Small paid plan
+            else:
+                estimated_total = balance + 1000  # Larger paid plan
+            
             return {
                 'credits_left': balance,
-                'total_credits': balance + 1000,  # Estimate total (free plan is 2500, could be more)
+                'total_credits': estimated_total,
                 'plan': 'Serper Free' if balance <= 2500 else 'Serper Paid',
                 'error': None
             }

@@ -272,6 +272,16 @@ def create_app():
             
         return redirect(url_for('admin_dashboard'))
     
+    @app.route('/admin/api-credits/<int:key_id>/check-live', methods=['POST'])
+    @admin_required
+    def check_single_api_live(key_id):
+        from serper_api_utils import check_serper_credits
+        
+        api_key = APIKey.query.get_or_404(key_id)
+        result = check_serper_credits(api_key.key_value)
+        
+        return jsonify(result)
+    
     @app.route('/admin/api-keys')
     @admin_required
     def admin_api_keys():
