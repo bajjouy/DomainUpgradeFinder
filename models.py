@@ -184,3 +184,43 @@ class SystemLog(db.Model):
     
     def __repr__(self):
         return f'<SystemLog {self.level}: {self.message[:50]}>'
+
+class PaymentMethodType(Enum):
+    STRIPE = "STRIPE"
+    PAYPAL = "PAYPAL"
+
+class PaymentMethod(db.Model):
+    __tablename__ = 'payment_methods'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    method_type = db.Column(db.Enum(PaymentMethodType), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Stripe configuration
+    stripe_public_key = db.Column(db.String(200))
+    stripe_secret_key = db.Column(db.String(200))
+    stripe_webhook_secret = db.Column(db.String(200))
+    
+    # PayPal configuration
+    paypal_email = db.Column(db.String(120))
+    paypal_instructions = db.Column(db.Text)
+    
+    def __repr__(self):
+        return f'<PaymentMethod {self.name}: {self.method_type.value}>'
+    
+    def get_config(self):
+        """Get configuration dict for this payment method"""
+        if self.method_type == PaymentMethodType.STRIPE:
+            return {
+                'public_key': self.stripe_public_key,
+                'secret_key': self.stripe_secret_key,
+                'webhook_secret': self.stripe_webhook_secret
+            }
+        elif self.method_type == PaymentMethodType.PAYPAL:
+            return {
+                'email': self.paypal_email,
+                'instructions': self.paypal_instructions
+            }

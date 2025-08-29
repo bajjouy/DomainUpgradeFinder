@@ -11,7 +11,7 @@ import tempfile
 import logging
 
 # Local imports
-from models import db, User, APIKey, CoinTransaction, SearchHistory, SearchSession, PricingPackage, SystemLog, UserRole, APIKeyStatus, TransactionStatus
+from models import db, User, APIKey, CoinTransaction, SearchHistory, SearchSession, PricingPackage, SystemLog, UserRole, APIKeyStatus, TransactionStatus, PaymentMethod, PaymentMethodType
 from config import Config
 from auth_utils import bcrypt, login_manager, admin_required, client_required, hash_password, check_password
 from api_rotation import EnhancedDomainAnalyzer
@@ -641,8 +641,16 @@ def create_app():
     @client_required
     def buy_coins():
         packages = PricingPackage.query.filter_by(is_active=True).all()
-        return render_template('client/buy_coins.html', packages=packages, 
-                             stripe_public_key=app.config['STRIPE_PUBLIC_KEY'])
+        payment_methods = PaymentMethod.query.filter_by(is_active=True).all()
+        
+        # Get primary Stripe method for frontend
+        stripe_method = next((pm for pm in payment_methods if pm.method_type == PaymentMethodType.STRIPE), None)
+        stripe_public_key = stripe_method.stripe_public_key if stripe_method else None
+        
+        return render_template('client/buy_coins.html', 
+                             packages=packages,
+                             payment_methods=payment_methods,
+                             stripe_public_key=stripe_public_key)
     
     @app.route('/create-payment-intent', methods=['POST'])
     @client_required
@@ -650,7 +658,19 @@ def create_app():
         package_id = request.json.get('package_id')
         package = PricingPackage.query.get_or_404(package_id)
         
+        # Get active Stripe payment method
+        stripe_method = PaymentMethod.query.filter_by(
+            method_type=PaymentMethodType.STRIPE,
+            is_active=True
+        ).first()
+        
+        if not stripe_method or not stripe_method.stripe_secret_key:
+            return jsonify({'error': 'Stripe payment not configured'}), 400
+        
         try:
+            # Use configured Stripe secret key
+            stripe.api_key = stripe_method.stripe_secret_key
+            
             # Create payment intent
             intent = stripe.PaymentIntent.create(
                 amount=package.price_cents,
@@ -886,6 +906,76 @@ def create_app():
                 headers={'Content-Disposition': f'attachment; filename=search_session_{session_id}_{timestamp}.xlsx'}
             )
     
+    # Payment Method Management Routes
+    @app.route('/admin/payment-methods')
+    @admin_required
+    def admin_payment_methods():
+        payment_methods = PaymentMethod.query.order_by(PaymentMethod.created_at.desc()).all()
+        return render_template('admin/payment_methods.html', payment_methods=payment_methods)
+    
+    @app.route('/admin/payment-methods/add', methods=['GET', 'POST'])
+    @admin_required
+    def add_payment_method():
+        if request.method == 'POST':
+            method_type = request.form.get('method_type')
+            name = request.form.get('name')
+            
+            payment_method = PaymentMethod()
+            payment_method.method_type = PaymentMethodType(method_type)
+            payment_method.name = name
+            
+            if method_type == 'STRIPE':
+                payment_method.stripe_public_key = request.form.get('stripe_public_key')
+                payment_method.stripe_secret_key = request.form.get('stripe_secret_key')
+                payment_method.stripe_webhook_secret = request.form.get('stripe_webhook_secret')
+            elif method_type == 'PAYPAL':
+                payment_method.paypal_email = request.form.get('paypal_email')
+                payment_method.paypal_instructions = request.form.get('paypal_instructions')
+            
+            db.session.add(payment_method)
+            db.session.commit()
+            
+            flash(f'{name} payment method added successfully', 'success')
+            return redirect(url_for('admin_payment_methods'))
+        
+        return render_template('admin/add_payment_method.html')
+    
+    @app.route('/admin/payment-methods/<int:method_id>/edit', methods=['GET', 'POST'])
+    @admin_required
+    def edit_payment_method(method_id):
+        payment_method = PaymentMethod.query.get_or_404(method_id)
+        
+        if request.method == 'POST':
+            payment_method.name = request.form.get('name')
+            
+            if payment_method.method_type == PaymentMethodType.STRIPE:
+                payment_method.stripe_public_key = request.form.get('stripe_public_key')
+                payment_method.stripe_secret_key = request.form.get('stripe_secret_key')
+                payment_method.stripe_webhook_secret = request.form.get('stripe_webhook_secret')
+            elif payment_method.method_type == PaymentMethodType.PAYPAL:
+                payment_method.paypal_email = request.form.get('paypal_email')
+                payment_method.paypal_instructions = request.form.get('paypal_instructions')
+            
+            payment_method.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            flash(f'{payment_method.name} updated successfully', 'success')
+            return redirect(url_for('admin_payment_methods'))
+        
+        return render_template('admin/edit_payment_method.html', payment_method=payment_method)
+    
+    @app.route('/admin/payment-methods/<int:method_id>/toggle', methods=['POST'])
+    @admin_required
+    def toggle_payment_method(method_id):
+        payment_method = PaymentMethod.query.get_or_404(method_id)
+        payment_method.is_active = not payment_method.is_active
+        payment_method.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        status = "activated" if payment_method.is_active else "deactivated"
+        flash(f'{payment_method.name} {status} successfully', 'success')
+        return redirect(url_for('admin_payment_methods'))
+
     return app
 
 if __name__ == '__main__':

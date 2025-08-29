@@ -7,6 +7,14 @@
     <div class="col-12">
         <h2><i class="fas fa-coins"></i> Buy Coins</h2>
         <p class="text-muted">Purchase coins to perform searches. Each search costs 1 coin.</p>
+        
+        {% if not payment_methods %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>No payment methods available.</strong> Please contact support to purchase coins.
+        </div>
+        {% endif %}
+        
         <hr>
     </div>
 </div>
@@ -27,12 +35,22 @@
                 <p class="text-muted">${{ "%.3f"|format(package.price_dollars / package.coins) }} per coin</p>
                 
                 <div class="d-grid gap-2">
-                    <button class="btn btn-primary" onclick="buyPackage({{ package.id }}, '{{ package.name }}', {{ package.price_cents }})">
-                        <i class="fas fa-credit-card"></i> Pay with Stripe
-                    </button>
-                    <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#manualPaymentModal{{ package.id }}">
-                        <i class="fas fa-university"></i> Manual Payment
-                    </button>
+                    {% for method in payment_methods %}
+                        {% if method.method_type.value == 'STRIPE' %}
+                            <button class="btn btn-primary" onclick="buyPackage({{ package.id }}, '{{ package.name }}', {{ package.price_cents }})">
+                                <i class="fas fa-credit-card"></i> Pay with {{ method.name }}
+                            </button>
+                        {% elif method.method_type.value == 'PAYPAL' %}
+                            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#paypalModal{{ package.id }}{{ method.id }}">
+                                <i class="fas fa-paypal"></i> Pay with {{ method.name }}
+                            </button>
+                        {% endif %}
+                    {% endfor %}
+                    {% if payment_methods %}
+                        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#manualPaymentModal{{ package.id }}">
+                            <i class="fas fa-university"></i> Other Payment
+                        </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -84,6 +102,59 @@
             </div>
         </div>
     </div>
+
+    <!-- PayPal Payment Modals for each method -->
+    {% for method in payment_methods %}
+        {% if method.method_type.value == 'PAYPAL' %}
+        <div class="modal fade" id="paypalModal{{ package.id }}{{ method.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">PayPal Payment - {{ package.name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <strong>{{ package.coins }} coins</strong> for <strong>${{ "%.2f"|format(package.price_dollars) }}</strong>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-body">
+                                <h6><i class="fas fa-paypal"></i> PayPal Instructions</h6>
+                                <p><strong>Send payment to:</strong> {{ method.paypal_email }}</p>
+                                <p><strong>Amount:</strong> ${{ "%.2f"|format(package.price_dollars) }}</p>
+                                <p><strong>Include in payment note:</strong> Your username ({{ current_user.email }}) and package "{{ package.name }}"</p>
+                                
+                                {% if method.paypal_instructions %}
+                                <hr>
+                                <div class="small text-muted">
+                                    {{ method.paypal_instructions|nl2br }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('request_manual_payment') }}" class="mt-3">
+                            <input type="hidden" name="package_id" value="{{ package.id }}">
+                            <input type="hidden" name="payment_method" value="PayPal - {{ method.name }}">
+                            <div class="mb-3">
+                                <label class="form-label">Confirmation Notes</label>
+                                <textarea class="form-control" name="payment_notes" rows="3" 
+                                        placeholder="Enter PayPal transaction ID or any additional notes..."></textarea>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-check"></i> Confirm PayPal Payment
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
     {% endfor %}
 </div>
 

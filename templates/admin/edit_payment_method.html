@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Payment Method{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-edit"></i> Edit Payment Method</h2>
+            <a href="{{ url_for('admin_payment_methods') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Payment Methods
+            </a>
+        </div>
+        <hr>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Edit {{ payment_method.name }}</h5>
+                <span class="badge bg-{{ 'primary' if payment_method.method_type.value == 'STRIPE' else 'info' }}">
+                    {{ payment_method.method_type.value }}
+                </span>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Payment Method Name</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ payment_method.name }}" required>
+                    </div>
+
+                    {% if payment_method.method_type.value == 'STRIPE' %}
+                    <!-- Stripe Configuration -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-credit-card"></i> Stripe Configuration</h6>
+                        <p class="mb-0">Update your Stripe API keys from the <a href="https://dashboard.stripe.com/apikeys" target="_blank">Stripe Dashboard</a>.</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stripe_public_key" class="form-label">Publishable Key</label>
+                        <input type="text" class="form-control" id="stripe_public_key" name="stripe_public_key" 
+                               value="{{ payment_method.stripe_public_key or '' }}" 
+                               placeholder="pk_live_... or pk_test_...">
+                        <small class="form-text text-muted">This key is safe to use in your frontend code.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stripe_secret_key" class="form-label">Secret Key</label>
+                        <input type="password" class="form-control" id="stripe_secret_key" name="stripe_secret_key" 
+                               value="{{ payment_method.stripe_secret_key or '' }}" 
+                               placeholder="sk_live_... or sk_test_...">
+                        <small class="form-text text-muted">Keep this key secure and never share it publicly.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stripe_webhook_secret" class="form-label">Webhook Secret (Optional)</label>
+                        <input type="password" class="form-control" id="stripe_webhook_secret" name="stripe_webhook_secret" 
+                               value="{{ payment_method.stripe_webhook_secret or '' }}" 
+                               placeholder="whsec_...">
+                        <small class="form-text text-muted">Used to verify webhook authenticity.</small>
+                    </div>
+
+                    {% elif payment_method.method_type.value == 'PAYPAL' %}
+                    <!-- PayPal Configuration -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-paypal"></i> PayPal Configuration</h6>
+                        <p class="mb-0">Update your PayPal configuration for manual payment processing.</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="paypal_email" class="form-label">PayPal Email Address</label>
+                        <input type="email" class="form-control" id="paypal_email" name="paypal_email" 
+                               value="{{ payment_method.paypal_email or '' }}" 
+                               placeholder="your-business@example.com">
+                        <small class="form-text text-muted">The email address where customers should send payments.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="paypal_instructions" class="form-label">Payment Instructions</label>
+                        <textarea class="form-control" id="paypal_instructions" name="paypal_instructions" 
+                                  rows="4" placeholder="Enter custom instructions for customers...">{{ payment_method.paypal_instructions or 'Please send payment to the PayPal email above and include your username and package name in the payment note. Allow 24-48 hours for manual processing.' }}</textarea>
+                        <small class="form-text text-muted">These instructions will be shown to customers during checkout.</small>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_payment_methods') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update Payment Method
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

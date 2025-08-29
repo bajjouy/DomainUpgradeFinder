@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Add Payment Method{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-plus"></i> Add Payment Method</h2>
+            <a href="{{ url_for('admin_payment_methods') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Payment Methods
+            </a>
+        </div>
+        <hr>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Payment Method Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Payment Method Name</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="e.g., Main Stripe Account" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="method_type" class="form-label">Payment Type</label>
+                            <select class="form-select" id="method_type" name="method_type" required onchange="toggleConfigFields()">
+                                <option value="">Select Payment Type</option>
+                                <option value="STRIPE">Stripe</option>
+                                <option value="PAYPAL">PayPal</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Stripe Configuration -->
+                    <div id="stripe-config" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-credit-card"></i> Stripe Configuration</h6>
+                            <p class="mb-0">Get your API keys from the <a href="https://dashboard.stripe.com/apikeys" target="_blank">Stripe Dashboard</a>.</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="stripe_public_key" class="form-label">Publishable Key</label>
+                            <input type="text" class="form-control" id="stripe_public_key" name="stripe_public_key" 
+                                   placeholder="pk_live_... or pk_test_...">
+                            <small class="form-text text-muted">This key is safe to use in your frontend code.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="stripe_secret_key" class="form-label">Secret Key</label>
+                            <input type="password" class="form-control" id="stripe_secret_key" name="stripe_secret_key" 
+                                   placeholder="sk_live_... or sk_test_...">
+                            <small class="form-text text-muted">Keep this key secure and never share it publicly.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="stripe_webhook_secret" class="form-label">Webhook Secret (Optional)</label>
+                            <input type="password" class="form-control" id="stripe_webhook_secret" name="stripe_webhook_secret" 
+                                   placeholder="whsec_...">
+                            <small class="form-text text-muted">Used to verify webhook authenticity.</small>
+                        </div>
+                    </div>
+
+                    <!-- PayPal Configuration -->
+                    <div id="paypal-config" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-paypal"></i> PayPal Configuration</h6>
+                            <p class="mb-0">Configure your PayPal account for manual payment processing.</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="paypal_email" class="form-label">PayPal Email Address</label>
+                            <input type="email" class="form-control" id="paypal_email" name="paypal_email" 
+                                   placeholder="your-business@example.com">
+                            <small class="form-text text-muted">The email address where customers should send payments.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="paypal_instructions" class="form-label">Payment Instructions</label>
+                            <textarea class="form-control" id="paypal_instructions" name="paypal_instructions" 
+                                      rows="4" placeholder="Enter custom instructions for customers...">Please send payment to the PayPal email above and include your username and package name in the payment note. Allow 24-48 hours for manual processing.</textarea>
+                            <small class="form-text text-muted">These instructions will be shown to customers during checkout.</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_payment_methods') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                            <i class="fas fa-save"></i> Add Payment Method
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleConfigFields() {
+    const methodType = document.getElementById('method_type').value;
+    const stripeConfig = document.getElementById('stripe-config');
+    const paypalConfig = document.getElementById('paypal-config');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Hide all config sections
+    stripeConfig.style.display = 'none';
+    paypalConfig.style.display = 'none';
+    
+    // Show relevant config section
+    if (methodType === 'STRIPE') {
+        stripeConfig.style.display = 'block';
+    } else if (methodType === 'PAYPAL') {
+        paypalConfig.style.display = 'block';
+    }
+    
+    // Enable submit button when method type is selected
+    submitBtn.disabled = !methodType;
+}
+</script>
+{% endblock %}

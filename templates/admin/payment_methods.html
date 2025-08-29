@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Methods Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-credit-card"></i> Payment Methods</h2>
+            <a href="{{ url_for('add_payment_method') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Payment Method
+            </a>
+        </div>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Configured Payment Methods</h5>
+            </div>
+            <div class="card-body">
+                {% if payment_methods %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Configuration</th>
+                                    <th>Status</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for method in payment_methods %}
+                                <tr>
+                                    <td><strong>{{ method.name }}</strong></td>
+                                    <td>
+                                        <span class="badge bg-{{ 'primary' if method.method_type.value == 'STRIPE' else 'info' }}">
+                                            {{ method.method_type.value }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if method.method_type.value == 'STRIPE' %}
+                                            <small class="text-muted">
+                                                Public Key: {{ method.stripe_public_key[:10] + '...' if method.stripe_public_key else 'Not set' }}<br>
+                                                Secret Key: {{ '***' + method.stripe_secret_key[-4:] if method.stripe_secret_key else 'Not set' }}
+                                            </small>
+                                        {% elif method.method_type.value == 'PAYPAL' %}
+                                            <small class="text-muted">
+                                                Email: {{ method.paypal_email or 'Not set' }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if method.is_active else 'secondary' }}">
+                                            {{ 'Active' if method.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ method.updated_at.strftime('%Y-%m-%d %H:%M') if method.updated_at else 'N/A' }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('edit_payment_method', method_id=method.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                            <form method="POST" action="{{ url_for('toggle_payment_method', method_id=method.id) }}" 
+                                                  style="display: inline;">
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-outline-{{ 'warning' if method.is_active else 'success' }}"
+                                                        onclick="return confirm('Are you sure you want to {{ 'deactivate' if method.is_active else 'activate' }} this payment method?')">
+                                                    <i class="fas fa-{{ 'pause' if method.is_active else 'play' }}"></i>
+                                                    {{ 'Deactivate' if method.is_active else 'Activate' }}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>No payment methods configured yet.</strong>
+                        <a href="{{ url_for('add_payment_method') }}">Add your first payment method</a> to start accepting payments.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-credit-card"></i> Stripe Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p>Stripe allows automated credit card processing with instant payments.</p>
+                <ul>
+                    <li>Requires API keys from Stripe Dashboard</li>
+                    <li>Supports all major credit/debit cards</li>
+                    <li>Automatic transaction processing</li>
+                    <li>Built-in fraud protection</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-paypal"></i> PayPal Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p>PayPal requires manual payment verification for security.</p>
+                <ul>
+                    <li>Customers send payments to your PayPal email</li>
+                    <li>Manual approval process for security</li>
+                    <li>Custom instructions for customers</li>
+                    <li>Full admin control over payments</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
