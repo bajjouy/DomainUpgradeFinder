@@ -27,7 +27,7 @@
         <div class="card bg-success text-white">
             <div class="card-body text-center">
                 <i class="fas fa-coins fa-2x mb-2"></i>
-                <h3>{{ total_remaining:,g }}</h3>
+                <h3>{{ "{:,.0f}".format(total_remaining) }}</h3>
                 <p class="mb-0">Credits Remaining</p>
             </div>
         </div>
@@ -37,7 +37,7 @@
         <div class="card bg-warning text-white">
             <div class="card-body text-center">
                 <i class="fas fa-chart-line fa-2x mb-2"></i>
-                <h3>{{ total_used:,g }}</h3>
+                <h3>{{ "{:,.0f}".format(total_used) }}</h3>
                 <p class="mb-0">Credits Used</p>
             </div>
         </div>
@@ -94,7 +94,7 @@
                             {% for key in low_keys %}
                             <tr class="table-danger">
                                 <td><strong>{{ key.key_name }}</strong></td>
-                                <td>{{ key.remaining_credits:,g }} / {{ key.total_credits:,g }}</td>
+                                <td>{{ "{:,.0f}".format(key.remaining_credits) }} / {{ "{:,.0f}".format(key.total_credits) }}</td>
                                 <td>
                                     <div class="progress" style="height: 20px;">
                                         <div class="progress-bar bg-danger" 
@@ -189,7 +189,7 @@
                                 </td>
                                 <td>
                                     <div>
-                                        <strong>Used:</strong> {{ key.credits_used:,g }}<br>
+                                        <strong>Used:</strong> {{ "{:,.0f}".format(key.credits_used) }}<br>
                                         <strong>Errors:</strong> {{ key.error_count }}<br>
                                         <small class="text-muted">Total requests: {{ key.usage_count }}</small>
                                     </div>
