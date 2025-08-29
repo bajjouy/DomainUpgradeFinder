@@ -174,9 +174,19 @@ function startBulkProcessing() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-        }
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 302) {
+                throw new Error('Authentication required - please login again');
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             addLogEntry(`✅ Processing completed successfully!`);
@@ -205,8 +215,22 @@ function startBulkProcessing() {
 }
 
 function pollProgress() {
-    fetch(`/api/search-progress/${sessionId}`)
-    .then(response => response.json())
+    fetch(`/api/search-progress/${sessionId}`, {
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 302) {
+                addLogEntry('❌ Session expired - please refresh and login again');
+                return;
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
         updateProgress(data);
         

@@ -407,6 +407,7 @@ def create_app():
     @app.route('/api/bulk-search/<int:session_id>', methods=['POST'])
     @client_required
     def process_bulk_search(session_id):
+        print(f"DEBUG: Starting bulk search for session {session_id}, user {current_user.id}")
         search_session = SearchSession.query.filter_by(
             id=session_id, user_id=current_user.id).first_or_404()
         
