@@ -280,6 +280,19 @@ def create_app():
         api_key = APIKey.query.get_or_404(key_id)
         result = check_serper_credits(api_key.key_value)
         
+        # Update database with live data if successful
+        if not result.get('error') and result.get('credits_left') is not None:
+            api_key.total_credits = result['total_credits']
+            actual_used = result['total_credits'] - result['credits_left']
+            api_key.credits_used = actual_used
+            api_key.last_credit_check = datetime.utcnow()
+            db.session.commit()
+            
+            # Add sync confirmation to result
+            result['database_synced'] = True
+        else:
+            result['database_synced'] = False
+        
         return jsonify(result)
     
     @app.route('/admin/api-keys')

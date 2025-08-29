@@ -11,6 +11,21 @@
     </div>
 </div>
 
+<!-- Auto-refresh and Sync Controls -->
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-end gap-2">
+        <button onclick="toggleAutoRefresh()" id="autoRefreshBtn" class="btn btn-outline-info btn-sm">
+            <i class="fas fa-clock"></i> <span id="autoRefreshText">Start Auto-Refresh (60s)</span>
+        </button>
+        <button onclick="syncAllKeys()" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-download"></i> Sync All Keys
+        </button>
+        <button onclick="location.reload()" class="btn btn-outline-success btn-sm">
+            <i class="fas fa-sync-alt"></i> Refresh Page
+        </button>
+    </div>
+</div>
+
 <!-- Credit Summary Cards -->
 <div class="row mb-4">
     <div class="col-md-3 mb-3">
@@ -295,15 +310,18 @@ function checkLiveCredits(keyName, keyId) {
             `;
         } else {
             const statusClass = data.credits_left < 500 ? 'danger' : (data.credits_left < 1000 ? 'warning' : 'success');
+            const syncStatus = data.database_synced ? '✅ Database Updated' : '⚠️ Database Not Updated';
             contentDiv.innerHTML = `
                 <div class="alert alert-${statusClass}">
                     <h6><strong>${keyName}</strong> Live Status:</h6>
                     <ul>
                         <li><strong>Credits Remaining:</strong> ${data.credits_left.toLocaleString()}</li>
                         <li><strong>Plan:</strong> ${data.plan}</li>
+                        <li><strong>Database Sync:</strong> ${syncStatus}</li>
                         <li><strong>Status:</strong> ${data.credits_left < 500 ? '🚨 Critical - Replace Soon' : (data.credits_left < 1000 ? '⚠️ Low - Monitor Closely' : '✅ Good')}</li>
                     </ul>
                     <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('live-credit-results').style.display='none'">Close</button>
+                    ${data.database_synced ? '<button class="btn btn-sm btn-outline-success ms-2" onclick="location.reload()">Reload Page</button>' : ''}
                 </div>
             `;
         }
@@ -314,6 +332,65 @@ function checkLiveCredits(keyName, keyId) {
                 <strong>Network Error:</strong> Could not check ${keyName}. ${error.message}
             </div>
         `;
+    });
+}
+
+// Auto-refresh functionality
+let autoRefreshInterval;
+let isAutoRefreshing = false;
+
+function toggleAutoRefresh() {
+    const btn = document.getElementById('autoRefreshBtn');
+    const text = document.getElementById('autoRefreshText');
+    
+    if (isAutoRefreshing) {
+        clearInterval(autoRefreshInterval);
+        isAutoRefreshing = false;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-info');
+        text.textContent = 'Start Auto-Refresh (60s)';
+    } else {
+        autoRefreshInterval = setInterval(() => {
+            location.reload();
+        }, 60000); // Refresh every 60 seconds
+        isAutoRefreshing = true;
+        btn.classList.remove('btn-outline-info');
+        btn.classList.add('btn-success');
+        text.textContent = 'Stop Auto-Refresh (60s)';
+    }
+}
+
+function syncAllKeys() {
+    const allKeys = document.querySelectorAll('[onclick*="checkLiveCredits"]');
+    let completed = 0;
+    const total = allKeys.length;
+    
+    // Show progress
+    const resultsDiv = document.getElementById('live-credit-results');
+    const contentDiv = document.getElementById('live-credit-content');
+    resultsDiv.style.display = 'block';
+    contentDiv.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Syncing all ${total} API keys... (${completed}/${total})</p>`;
+    
+    // Sync each key with delay to avoid rate limiting
+    allKeys.forEach((button, index) => {
+        setTimeout(() => {
+            button.click();
+            completed++;
+            if (completed === total) {
+                setTimeout(() => {
+                    contentDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <h6>✅ Sync Complete!</h6>
+                            <p>All ${total} API keys have been synced with live data.</p>
+                            <button class="btn btn-sm btn-outline-success" onclick="location.reload()">Reload Page</button>
+                            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="document.getElementById('live-credit-results').style.display='none'">Close</button>
+                        </div>
+                    `;
+                }, 1000);
+            } else {
+                contentDiv.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Syncing all ${total} API keys... (${completed}/${total})</p>`;
+            }
+        }, index * 2000); // 2 second delay between each call
     });
 }
 </script>
