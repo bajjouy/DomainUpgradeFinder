@@ -137,10 +137,15 @@ class APICreditsScheduler:
                                     'was_low_before': old_remaining < 500
                                 })
                             
-                            # AUTO-DEACTIVATE: Keys with >2000 credits (monthly renewal detected)
-                            if key_detail['credits_left'] > 2000 and api_key.status == APIKeyStatus.ACTIVE:
+                            # AUTO-ACTIVATE: Keys with >2000 credits (monthly renewal detected)
+                            if key_detail['credits_left'] > 2000 and api_key.status == APIKeyStatus.INACTIVE:
+                                api_key.status = APIKeyStatus.ACTIVE
+                                logger.info(f"🔄 AUTO-ACTIVATED {api_key.key_name}: {key_detail['credits_left']} credits (monthly renewal detected)")
+                            
+                            # AUTO-DEACTIVATE: Keys with 0 credits (completely unusable)
+                            elif key_detail['credits_left'] == 0 and api_key.status == APIKeyStatus.ACTIVE:
                                 api_key.status = APIKeyStatus.INACTIVE
-                                logger.info(f"🔄 AUTO-DEACTIVATED {api_key.key_name}: {key_detail['credits_left']} credits (monthly renewal detected)")
+                                logger.info(f"🔄 AUTO-DEACTIVATED {api_key.key_name}: 0 credits (unusable)")
                             
                             logger.info(f"✅ Updated {api_key.key_name}: {key_detail['credits_left']} credits remaining")
                 
