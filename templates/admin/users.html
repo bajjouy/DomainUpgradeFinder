@@ -97,9 +97,26 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#adjustCoinsModal{{ user.id }}">
-                                        <i class="fas fa-coins"></i> Adjust Coins
-                                    </button>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#adjustCoinsModal{{ user.id }}">
+                                            <i class="fas fa-coins"></i> Coins
+                                        </button>
+                                        
+                                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#changePasswordModal{{ user.id }}">
+                                            <i class="fas fa-key"></i> Password
+                                        </button>
+                                        
+                                        <form method="POST" action="{{ url_for('toggle_user_status', user_id=user.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if user.user_active else 'success' }}" 
+                                                    onclick="return confirm('Are you sure you want to {{ 'deactivate' if user.user_active else 'activate' }} this user?')">
+                                                <i class="fas fa-{{ 'pause' if user.user_active else 'play' }}"></i> {{ 'Deactivate' if user.user_active else 'Activate' }}
+                                            </button>
+                                        </form>
+                                        
+                                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             
@@ -134,6 +151,81 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Change Password Modal -->
+                            <div class="modal fade" id="changePasswordModal{{ user.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Change Password for {{ user.email }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('change_user_password', user_id=user.id) }}">
+                                            <div class="modal-body">
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    <strong>Warning:</strong> This will change the user's password. They will need to log in with the new password.
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="new_password{{ user.id }}" class="form-label">New Password</label>
+                                                    <input type="password" class="form-control" id="new_password{{ user.id }}" name="new_password" 
+                                                           minlength="6" required placeholder="Enter new password (min 6 characters)">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="confirm_password{{ user.id }}" class="form-label">Confirm Password</label>
+                                                    <input type="password" class="form-control" id="confirm_password{{ user.id }}" 
+                                                           minlength="6" required placeholder="Confirm new password">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-warning" onclick="return validatePassword({{ user.id }})">Change Password</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Delete User Modal -->
+                            <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-danger text-white">
+                                            <h5 class="modal-title">Delete User: {{ user.email }}</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-danger">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                <strong>DANGER:</strong> This action cannot be undone!
+                                            </div>
+                                            <p><strong>This will permanently delete:</strong></p>
+                                            <ul>
+                                                <li>User account: <strong>{{ user.email }}</strong></li>
+                                                <li>All search history ({{ user.search_sessions|length }} sessions)</li>
+                                                <li>All coin transactions</li>
+                                                <li>All associated data</li>
+                                            </ul>
+                                            <p class="text-muted">User currently has <strong>{{ user.coins }} coins</strong>.</p>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Type <strong>DELETE</strong> to confirm:</label>
+                                                <input type="text" class="form-control" id="deleteConfirm{{ user.id }}" 
+                                                       placeholder="Type DELETE to confirm" required>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-danger" 
+                                                        onclick="return confirmDelete({{ user.id }})" disabled id="deleteBtn{{ user.id }}">
+                                                    <i class="fas fa-trash"></i> DELETE USER
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -142,4 +234,50 @@
         </div>
     </div>
 </div>
+
+<script>
+function validatePassword(userId) {
+    const password = document.getElementById('new_password' + userId).value;
+    const confirm = document.getElementById('confirm_password' + userId).value;
+    
+    if (password !== confirm) {
+        alert('Passwords do not match!');
+        return false;
+    }
+    
+    if (password.length < 6) {
+        alert('Password must be at least 6 characters long!');
+        return false;
+    }
+    
+    return confirm('Are you sure you want to change this user\'s password?');
+}
+
+function confirmDelete(userId) {
+    const input = document.getElementById('deleteConfirm' + userId).value;
+    if (input !== 'DELETE') {
+        alert('You must type DELETE to confirm deletion.');
+        return false;
+    }
+    return true;
+}
+
+// Enable delete button when user types DELETE
+document.addEventListener('DOMContentLoaded', function() {
+    {% for user in users %}
+    document.getElementById('deleteConfirm{{ user.id }}').addEventListener('input', function() {
+        const btn = document.getElementById('deleteBtn{{ user.id }}');
+        if (this.value === 'DELETE') {
+            btn.disabled = false;
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-danger');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('btn-secondary');
+            btn.classList.remove('btn-danger');
+        }
+    });
+    {% endfor %}
+});
+</script>
 {% endblock %}

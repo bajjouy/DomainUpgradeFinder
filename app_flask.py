@@ -242,6 +242,74 @@ def create_app():
         flash('Pricing package added', 'success')
         return redirect(url_for('admin_pricing'))
     
+    @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+    @admin_required
+    def delete_user(user_id):
+        user = User.query.get_or_404(user_id)
+        
+        # Prevent admin from deleting themselves
+        if user.id == current_user.id:
+            flash('You cannot delete your own account.', 'error')
+            return redirect(url_for('admin_users'))
+        
+        # Prevent deleting other admin users
+        if user.role == UserRole.ADMIN:
+            flash('Cannot delete admin users.', 'error')
+            return redirect(url_for('admin_users'))
+        
+        user_email = user.email
+        
+        # Delete associated records first
+        CoinTransaction.query.filter_by(user_id=user_id).delete()
+        SearchHistory.query.filter_by(user_id=user_id).delete()
+        SearchSession.query.filter_by(user_id=user_id).delete()
+        
+        # Delete the user
+        db.session.delete(user)
+        db.session.commit()
+        
+        flash(f'User {user_email} has been deleted successfully.', 'success')
+        return redirect(url_for('admin_users'))
+    
+    @app.route('/admin/users/<int:user_id>/toggle-status', methods=['POST'])
+    @admin_required
+    def toggle_user_status(user_id):
+        user = User.query.get_or_404(user_id)
+        
+        # Prevent admin from deactivating themselves
+        if user.id == current_user.id:
+            flash('You cannot change your own account status.', 'error')
+            return redirect(url_for('admin_users'))
+        
+        # Prevent changing status of other admin users
+        if user.role == UserRole.ADMIN:
+            flash('Cannot change admin user status.', 'error')
+            return redirect(url_for('admin_users'))
+        
+        user.user_active = not user.user_active
+        db.session.commit()
+        
+        status = "activated" if user.user_active else "deactivated"
+        flash(f'User {user.email} has been {status}.', 'success')
+        return redirect(url_for('admin_users'))
+    
+    @app.route('/admin/users/<int:user_id>/change-password', methods=['POST'])
+    @admin_required
+    def change_user_password(user_id):
+        user = User.query.get_or_404(user_id)
+        new_password = request.form.get('new_password')
+        
+        if not new_password or len(new_password) < 6:
+            flash('Password must be at least 6 characters long.', 'error')
+            return redirect(url_for('admin_users'))
+        
+        # Hash the new password
+        user.password_hash = hash_password(new_password)
+        db.session.commit()
+        
+        flash(f'Password changed successfully for {user.email}.', 'success')
+        return redirect(url_for('admin_users'))
+    
     # Client Dashboard Routes
     @app.route('/dashboard')
     @client_required
