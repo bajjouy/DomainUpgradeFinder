@@ -167,25 +167,14 @@ document.getElementById('searchBtn')?.addEventListener('click', function(e) {
     this.disabled = true;
     this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
     
-    // Simulate progress (since this is synchronous)
-    let progress = 0;
-    const progressBar = document.getElementById('progressBar');
+    // Update progress display
     const progressText = document.getElementById('progressText');
     const currentKeyword = document.getElementById('currentKeyword');
     
-    // Update progress text
-    progressText.textContent = `Searching ${totalKeywords} keyword set${totalKeywords > 1 ? 's' : ''}...`;
+    progressText.textContent = `Processing ${totalKeywords} keyword set${totalKeywords > 1 ? 's' : ''}...`;
+    currentKeyword.textContent = 'Starting search...';
     
-    // Show keywords being processed
-    keywordSets.forEach((keyword, index) => {
-        setTimeout(() => {
-            currentKeyword.textContent = keyword;
-            progress = Math.round(((index + 1) / totalKeywords) * 100);
-            progressBar.style.width = progress + '%';
-            progressBar.setAttribute('aria-valuenow', progress);
-            progressBar.textContent = progress + '%';
-        }, index * 1000); // Show each keyword for 1 second
-    });
+    // Let the form submit naturally - no fake progress simulation
 });
 </script>
 

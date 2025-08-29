@@ -118,6 +118,7 @@ class SearchHistory(db.Model):
     api_key_used = db.Column(db.String(100))
     search_duration = db.Column(db.Float)  # in seconds
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    session_id = db.Column(db.Integer, db.ForeignKey('search_sessions.id'), nullable=True)
     
     def __repr__(self):
         return f'<SearchHistory {self.user_id}: {self.keywords[:50]}>'
@@ -129,6 +130,25 @@ class SearchHistory(db.Model):
     
     def set_results(self, results):
         self.results_json = json.dumps(results)
+
+
+class SearchSession(db.Model):
+    __tablename__ = 'search_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    total_keywords = db.Column(db.Integer, nullable=False)
+    total_results = db.Column(db.Integer, default=0)
+    upgrade_results = db.Column(db.Integer, default=0)
+    keyword_list = db.Column(db.Text)  # Original keyword input
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='search_sessions')
+    searches = db.relationship('SearchHistory', backref='session', foreign_keys='SearchHistory.session_id')
+    
+    def __repr__(self):
+        return f'<SearchSession {self.user_id}: {self.total_keywords} keywords>'
 
 class PricingPackage(db.Model):
     __tablename__ = 'pricing_packages'

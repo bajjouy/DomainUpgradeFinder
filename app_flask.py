@@ -11,7 +11,7 @@ import tempfile
 import logging
 
 # Local imports
-from models import db, User, APIKey, CoinTransaction, SearchHistory, PricingPackage, SystemLog, UserRole, APIKeyStatus, TransactionStatus
+from models import db, User, APIKey, CoinTransaction, SearchHistory, SearchSession, PricingPackage, SystemLog, UserRole, APIKeyStatus, TransactionStatus
 from config import Config
 from auth_utils import bcrypt, login_manager, admin_required, client_required, hash_password, check_password
 from api_rotation import EnhancedDomainAnalyzer
@@ -301,13 +301,24 @@ def create_app():
                     results, api_key_used = app.domain_analyzer.analyze_keywords(keywords)
                     search_duration = (datetime.utcnow() - search_start).total_seconds()
                     
-                    # Save search history
+                    # Create search session first if it doesn't exist
+                    if 'current_session_id' not in session:
+                        search_session = SearchSession()
+                        search_session.user_id = current_user.id
+                        search_session.total_keywords = total_searches
+                        search_session.keyword_list = keywords_input
+                        db.session.add(search_session)
+                        db.session.flush()  # Get the ID
+                        session['current_session_id'] = search_session.id
+                    
+                    # Save search history linked to session
                     search_history = SearchHistory()
                     search_history.user_id = current_user.id
                     search_history.keywords = keywords
                     search_history.set_results(results)
                     search_history.api_key_used = api_key_used
                     search_history.search_duration = search_duration
+                    search_history.session_id = session['current_session_id']
                     
                     db.session.add(search_history)
                     all_results.extend(results)
@@ -332,11 +343,16 @@ def create_app():
                     else:
                         flash(f'Search completed! Found {total_count} potential matches but no clear upgrade opportunities.', 'info')
                     
-                    return render_template('client/search.html', 
-                                         results=upgrade_results, 
-                                         show_results=True,
-                                         upgrade_count=upgrade_count,
-                                         total_results=total_count)
+                    # Update the search session with final statistics
+                    search_session = SearchSession.query.get(session['current_session_id'])
+                    search_session.total_results = total_count
+                    search_session.upgrade_results = upgrade_count
+                    
+                    db.session.commit()
+                    
+                    # Clear the session variable and redirect to the search session page
+                    session_id = session.pop('current_session_id', None)
+                    return redirect(url_for('view_search_session', session_id=session_id))
                 else:
                     flash('No results found for your keywords.', 'info')
                     return render_template('client/search.html')
@@ -550,6 +566,91 @@ def create_app():
         user = User.query.get(transaction.user_id)
         flash(f'Payment rejected for {user.email}. Reason: {admin_notes or "No reason provided"}', 'warning')
         return redirect(url_for('admin_payments'))
+    
+    # Search Session Management Routes
+    @app.route('/search-session/<int:session_id>')
+    @client_required
+    def view_search_session(session_id):
+        search_session = SearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id).first_or_404()
+        
+        # Get all searches in this session
+        searches = SearchHistory.query.filter_by(session_id=session_id).all()
+        
+        # Collect all results
+        all_results = []
+        upgrade_results = []
+        for search in searches:
+            results = search.get_results()
+            if results:
+                all_results.extend(results)
+                upgrade_results.extend([r for r in results if r.get('Is_Upgrade', False)])
+        
+        return render_template('client/search_session.html',
+                             session=search_session,
+                             searches=searches,
+                             all_results=all_results,
+                             upgrade_results=upgrade_results)
+    
+    @app.route('/delete-search-session/<int:session_id>', methods=['POST'])
+    @client_required
+    def delete_search_session(session_id):
+        search_session = SearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id).first_or_404()
+        
+        # Delete associated search history
+        SearchHistory.query.filter_by(session_id=session_id).delete()
+        
+        # Delete the session
+        db.session.delete(search_session)
+        db.session.commit()
+        
+        flash('Search session deleted successfully', 'success')
+        return redirect(url_for('search_history'))
+    
+    @app.route('/download-session/<int:session_id>/<format>')
+    @client_required
+    def download_session_results(session_id, format):
+        search_session = SearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id).first_or_404()
+        
+        # Get all results from this session
+        searches = SearchHistory.query.filter_by(session_id=session_id).all()
+        results = []
+        for search in searches:
+            search_results = search.get_results()
+            if search_results:
+                results.extend(search_results)
+        
+        if not results:
+            flash('No results to download for this search session', 'error')
+            return redirect(url_for('view_search_session', session_id=session_id))
+        
+        df = pd.DataFrame(results)
+        timestamp = search_session.created_at.strftime('%Y%m%d_%H%M%S')
+        
+        if format == 'csv':
+            csv_buffer = io.StringIO()
+            df.to_csv(csv_buffer, index=False)
+            csv_data = csv_buffer.getvalue()
+            
+            return Response(
+                csv_data,
+                mimetype='text/csv',
+                headers={'Content-Disposition': f'attachment; filename=search_session_{session_id}_{timestamp}.csv'}
+            )
+        
+        elif format == 'excel':
+            excel_buffer = io.BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='Search Results', index=False)
+            excel_data = excel_buffer.getvalue()
+            
+            return Response(
+                excel_data,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                headers={'Content-Disposition': f'attachment; filename=search_session_{session_id}_{timestamp}.xlsx'}
+            )
     
     return app
 
