@@ -5,7 +5,7 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2><i class="fas fa-tachometer-alt"></i> Welcome, {{ user.email }}</h2>
+        <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
         <hr>
     </div>
 </div>
@@ -38,10 +38,10 @@
     <div class="col-md-4">
         <div class="card bg-success text-white">
             <div class="card-body text-center">
-                <i class="fas fa-history fa-3x mb-2"></i>
-                <h3>{{ recent_transactions|length }}</h3>
-                <p>Recent Transactions</p>
-                <a href="{{ url_for('search_history') }}" class="btn btn-light btn-sm">View History</a>
+                <i class="fas fa-chart-line fa-3x mb-2"></i>
+                <h3>{{ recent_searches|selectattr('get_results')|map('method', 'get_results')|map('selectattr', 'Is_Upgrade', 'equalto', true)|map('list')|map('length')|sum }}</h3>
+                <p>Upgrade Opportunities</p>
+                <a href="{{ url_for('search_history') }}" class="btn btn-light btn-sm">View Results</a>
             </div>
         </div>
     </div>
@@ -59,8 +59,7 @@
                     <div class="border-bottom mb-2 pb-2">
                         <strong>{{ search.keywords }}</strong><br>
                         <small class="text-muted">
-                            {{ search.created_at.strftime('%Y-%m-%d %H:%M') }} - 
-                            {{ search.get_results()|length }} results
+                            {{ search.get_results()|length }} results - {{ search.get_results()|selectattr('Is_Upgrade', 'equalto', true)|list|length }} upgrades
                         </small>
                     </div>
                     {% endfor %}
@@ -74,21 +73,19 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-coins"></i> Recent Transactions</h5>
+                <h5><i class="fas fa-coins"></i> Account Activity</h5>
             </div>
             <div class="card-body">
                 {% if recent_transactions %}
                     {% for transaction in recent_transactions %}
                     <div class="d-flex justify-content-between border-bottom mb-2 pb-2">
                         <div>
-                            <strong>{{ transaction.transaction_type.replace('_', ' ').title() }}</strong>
-                            {% if transaction.transaction_type == 'manual_payment' and transaction.status.value == 'PENDING' %}
-                                <span class="badge bg-warning ms-1">Pending Approval</span>
-                            {% elif transaction.transaction_type == 'manual_payment' and transaction.status.value == 'FAILED' %}
-                                <span class="badge bg-danger ms-1">Rejected</span>
+                            <strong>{% if transaction.transaction_type == 'search' %}Search{% elif transaction.transaction_type == 'stripe_payment' %}Payment{% elif transaction.transaction_type == 'manual_payment' %}Manual Payment{% else %}{{ transaction.transaction_type.replace('_', ' ').title() }}{% endif %}</strong>
+                            {% if transaction.status.value == 'PENDING' %}
+                                <span class="badge bg-warning ms-1">Pending</span>
+                            {% elif transaction.status.value == 'FAILED' %}
+                                <span class="badge bg-danger ms-1">Failed</span>
                             {% endif %}
-                            <br>
-                            <small class="text-muted">{{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                         </div>
                         <div class="text-end">
                             <span class="badge bg-{{ 'success' if transaction.amount > 0 and transaction.status.value == 'COMPLETED' else 'warning' if transaction.status.value == 'PENDING' else 'danger' }}">
@@ -98,7 +95,7 @@
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-muted">No transactions yet.</p>
+                    <p class="text-muted">No recent activity.</p>
                 {% endif %}
             </div>
         </div>

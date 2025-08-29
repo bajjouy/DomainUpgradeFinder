@@ -105,12 +105,9 @@
                 {% for key in api_keys %}
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span>{{ key.key_name }}</span>
-                    <div>
-                        <span class="badge bg-{{ 'success' if key.status.value == 'active' else 'danger' }}">
-                            {{ key.status.value }}
-                        </span>
-                        <small class="text-muted ms-2">{{ key.usage_count }} uses</small>
-                    </div>
+                    <span class="badge bg-{{ 'success' if key.status.value == 'active' else 'danger' }}">
+                        {{ key.status.value.title() }}
+                    </span>
                 </div>
                 {% endfor %}
             </div>
