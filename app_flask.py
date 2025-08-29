@@ -862,7 +862,7 @@ def create_app():
                     try:
                         print(f"DEBUG: Trying bulk search with max_results={attempt_results}")
                         bulk_results = app.domain_analyzer.api_manager.search_google_bulk(
-                            keyword_sets, progress_callback=update_progress, max_results=attempt_results
+                            keyword_sets, progress_callback=update_progress, max_results=attempt_results, flask_app=app
                         )
                         print(f"DEBUG: Bulk search successful with max_results={attempt_results}, got {len(bulk_results)} results")
                         return bulk_results, attempt_results

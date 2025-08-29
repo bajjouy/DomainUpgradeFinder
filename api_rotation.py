@@ -38,7 +38,7 @@ class APIRotationManager:
         
         return key
     
-    def search_google_bulk(self, queries: List[str], max_results: int = 10, progress_callback=None) -> List[Tuple[str, List[Dict], Optional[str]]]:
+    def search_google_bulk(self, queries: List[str], max_results: int = 10, progress_callback=None, flask_app=None) -> List[Tuple[str, List[Dict], Optional[str]]]:
         """
         Perform bulk searches with PARALLEL processing (10 simultaneous searches)
         Returns: List of (query, results, api_key_used) tuples
@@ -56,20 +56,25 @@ class APIRotationManager:
         
         def search_single_query(query):
             """Single query search function for parallel execution with Flask context"""
-            # Import Flask app here to avoid circular imports
-            from flask import current_app
-            
-            # Each thread needs its own application context for database access
-            with current_app.app_context():
-                try:
-                    print(f"DEBUG: PARALLEL search starting for query: '{query}'")
+            try:
+                if flask_app:
+                    # Each thread needs its own application context for database access
+                    with flask_app.app_context():
+                        print(f"DEBUG: PARALLEL search starting for query: '{query}'")
+                        search_results, api_key_used = self.search_google_with_rotation(query, max_results)
+                        print(f"DEBUG: PARALLEL search completed for query: '{query}' - got {len(search_results)} results")
+                        return (query, search_results, api_key_used)
+                else:
+                    print(f"DEBUG: PARALLEL search starting for query: '{query}' (no Flask app context)")
                     search_results, api_key_used = self.search_google_with_rotation(query, max_results)
                     print(f"DEBUG: PARALLEL search completed for query: '{query}' - got {len(search_results)} results")
                     return (query, search_results, api_key_used)
-                except Exception as e:
-                    print(f"DEBUG: PARALLEL search error for query '{query}': {str(e)}")
-                    self._log_system("error", f"Parallel bulk search failed for query '{query}': {str(e)}")
-                    return (query, [], None)
+            except Exception as e:
+                print(f"DEBUG: PARALLEL search error for query '{query}': {str(e)}")
+                if flask_app:
+                    with flask_app.app_context():
+                        self._log_system("error", f"Parallel bulk search failed for query '{query}': {str(e)}")
+                return (query, [], None)
         
         # Execute searches in parallel with ThreadPoolExecutor
         print(f"DEBUG: Starting ThreadPoolExecutor with {max_workers} workers")
