@@ -114,6 +114,7 @@
                                 <th>Name</th>
                                 <th>Status</th>
                                 <th>Usage</th>
+                                <th>Credits</th>
                                 <th>Errors</th>
                                 <th>Last Used</th>
                                 <th>Actions</th>
@@ -131,6 +132,13 @@
                                 <td>
                                     {{ key.usage_count }}
                                     <small class="text-muted">/ {{ key.daily_limit }}</small>
+                                </td>
+                                <td>
+                                    {% set remaining = key.total_credits - key.credits_used %}
+                                    <span class="badge bg-{{ 'success' if remaining > 1000 else 'warning' if remaining > 100 else 'danger' }}">
+                                        {{ remaining }}
+                                    </span>
+                                    <small class="text-muted">/ {{ key.total_credits }}</small>
                                 </td>
                                 <td>
                                     {% if key.error_count > 0 %}
