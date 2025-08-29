@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}My Coins{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-coins"></i> My Coins</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- Coin Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-wallet fa-2x mb-2"></i>
+                <h3>{{ current_balance }}</h3>
+                <p class="mb-0">Current Balance</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                <h3>{{ total_purchased }}</h3>
+                <p class="mb-0">Total Purchased</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-search fa-2x mb-2"></i>
+                <h3>{{ total_spent }}</h3>
+                <p class="mb-0">Used for Searches</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <a href="{{ url_for('buy_coins') }}" class="text-white text-decoration-none">
+                    <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                    <h5>Buy More</h5>
+                    <p class="mb-0">Purchase Coins</p>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('buy_coins') }}" class="btn btn-primary btn-lg w-100 mb-2">
+                            <i class="fas fa-credit-card"></i> Buy More Coins
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{{ url_for('search') }}" class="btn btn-success btn-lg w-100 mb-2">
+                            <i class="fas fa-search"></i> Start New Search
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-history"></i> Recent Transactions</h5>
+                <span class="badge bg-secondary">Last 20 transactions</span>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if transaction.amount > 0 %}
+                                        {% if 'paypal' in transaction.transaction_type %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-paypal"></i> PayPal Purchase
+                                            </span>
+                                        {% elif 'purchase' in transaction.transaction_type %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-credit-card"></i> Stripe Purchase
+                                            </span>
+                                        {% elif 'manual' in transaction.transaction_type %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-user-cog"></i> Manual Credit
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-plus"></i> Credit
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-search"></i> Search
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if transaction.amount > 0 %}
+                                        <span class="text-success fw-bold">+{{ transaction.amount }}</span>
+                                    {% else %}
+                                        <span class="text-danger fw-bold">{{ transaction.amount }}</span>
+                                    {% endif %}
+                                    <small class="text-muted">coins</small>
+                                </td>
+                                <td>
+                                    {% if transaction.status.value == 'COMPLETED' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif transaction.status.value == 'PENDING' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {% if transaction.payment_method %}
+                                            {{ transaction.payment_method }}
+                                        {% elif transaction.transaction_type %}
+                                            {{ transaction.transaction_type.replace('_', ' ').title() }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No transactions yet</h5>
+                    <p class="text-muted">Your coin transactions will appear here</p>
+                    <a href="{{ url_for('buy_coins') }}" class="btn btn-primary">
+                        <i class="fas fa-shopping-cart"></i> Buy Your First Coins
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Coin Usage Tips -->
+<div class="row mt-4">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-lightbulb"></i> Coin Usage Tips</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-info-circle text-primary"></i> How Coins Work</h6>
+                        <ul class="small">
+                            <li>Each keyword search costs <strong>1 coin</strong></li>
+                            <li>Coins never expire</li>
+                            <li>Bulk searches deduct coins upfront</li>
+                            <li>Failed searches may still deduct coins</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-star text-warning"></i> Pro Tips</h6>
+                        <ul class="small">
+                            <li>Use higher result limits (50-100) for better coverage</li>
+                            <li>Group related keywords for efficiency</li>
+                            <li>Check search history to avoid duplicates</li>
+                            <li>Buy in bulk for better value</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

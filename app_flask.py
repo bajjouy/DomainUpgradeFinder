@@ -731,6 +731,29 @@ def create_app():
         
         return render_template('client/history.html', searches=searches)
     
+    @app.route('/coins')
+    @client_required
+    def coins_dashboard():
+        # Get recent transactions for this user
+        recent_transactions = CoinTransaction.query.filter_by(
+            user_id=current_user.id
+        ).order_by(CoinTransaction.created_at.desc()).limit(20).all()
+        
+        # Calculate total spent and earned
+        total_purchased = db.session.query(db.func.sum(CoinTransaction.amount)).filter_by(
+            user_id=current_user.id
+        ).filter(CoinTransaction.amount > 0).scalar() or 0
+        
+        total_spent = abs(db.session.query(db.func.sum(CoinTransaction.amount)).filter_by(
+            user_id=current_user.id
+        ).filter(CoinTransaction.amount < 0).scalar() or 0)
+        
+        return render_template('client/coins.html',
+                             current_balance=current_user.coins,
+                             total_purchased=total_purchased,
+                             total_spent=total_spent,
+                             recent_transactions=recent_transactions)
+    
     @app.route('/buy-coins')
     @client_required
     def buy_coins():
