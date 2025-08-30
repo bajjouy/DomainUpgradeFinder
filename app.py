@@ -1,41 +1,152 @@
 #!/usr/bin/env python3
 """
-Entry point that runs Flask app even when called with 'streamlit run app.py'.
-This bypasses Streamlit and directly runs the Flask application.
+Streamlit app that provides access to the Flask Domain Upgrade Pro SaaS application.
+This works with Streamlit deployment while giving users access to the Flask app.
 """
 
-import sys
+import streamlit as st
+import streamlit.components.v1 as components
+import requests
+import time
 import os
+import sys
 
-# Add the current directory to the Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Configure Streamlit page
+st.set_page_config(
+    page_title="Domain Upgrade Pro SaaS",
+    page_icon="🚀",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# Check if this is being run by streamlit
-if 'streamlit' in sys.modules or any('streamlit' in arg for arg in sys.argv):
-    # If called by streamlit, we'll run Flask instead
-    print("Streamlit detected, starting Flask application instead...")
-    os.system(f"{sys.executable} app_flask.py")
-    sys.exit(0)
+# Hide Streamlit branding
+hide_streamlit_style = """
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+.stDeployButton {display:none;}
+.stDecoration {display:none;}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# Direct execution - run Flask app
-if __name__ == '__main__':
-    try:
-        from app_flask import create_app
+# Main application
+def main():
+    # Get the Flask app URL - it should be running on the same domain but different port
+    # In Replit deployment, both apps share the same external URL
+    base_url = "https://domain-upgrade-finder-bajjouyounes.replit.app"
+    
+    # Display header
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 1rem;">
+        <h1 style="color: #ff6b6b; font-size: 3rem; margin-bottom: 1rem;">🚀 Domain Upgrade Pro SaaS</h1>
+        <h3 style="color: #333; margin-bottom: 2rem;">Your Complete Domain Analysis Platform</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Create tabs for different access methods
+    tab1, tab2, tab3 = st.tabs(["🚀 Launch App", "📱 Features", "ℹ️ Info"])
+    
+    with tab1:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    color: white; padding: 2rem; border-radius: 15px; margin: 2rem 0; text-align: center;">
+            <h3>🎯 Your SaaS Platform is Ready!</h3>
+            <p style="font-size: 1.1rem; margin: 1rem 0;">Access your complete Domain Upgrade Finder platform</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        app = create_app()
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            # Primary access button
+            if st.button("🚀 Launch Domain Upgrade Pro SaaS", 
+                        type="primary", 
+                        use_container_width=True,
+                        help="Opens your Flask application in a new tab"):
+                st.markdown(f"""
+                <script>
+                    window.open('{base_url}', '_blank');
+                </script>
+                """, unsafe_allow_html=True)
+                st.success("✅ Opening your Domain Upgrade Pro SaaS platform...")
+            
+            # Alternative access
+            st.markdown(f"""
+            <div style="text-align: center; margin: 1rem 0;">
+                <p>Direct access: <a href="{base_url}" target="_blank" style="color: #ff6b6b; font-weight: bold;">{base_url}</a></p>
+            </div>
+            """, unsafe_allow_html=True)
         
-        # Get port from environment variable or default to 5000
-        port = int(os.environ.get('PORT', 5000))
+        # Login information
+        st.info("""
+        **Default Admin Login:**
+        - Email: admin@example.com
+        - Password: admin123
+        """)
+    
+    with tab2:
+        st.markdown("""
+        ### 🌟 Platform Features
         
-        print(f"Starting Flask application on port {port}")
-        app.run(
-            host='0.0.0.0',
-            port=port,
-            debug=False
-        )
+        Your Domain Upgrade Pro SaaS includes:
         
-    except Exception as e:
-        print(f"Error starting Flask application: {e}")
-        # Fallback: try running app_flask.py directly
-        os.system(f"{sys.executable} app_flask.py")
-        sys.exit(1)
+        **🔍 Domain Analysis Engine**
+        - Advanced keyword extraction from domain names
+        - Intelligent domain parsing and analysis
+        - Competitor domain identification
+        
+        **🎯 Market Research Tools**
+        - Google search integration via SerpAPI
+        - Competitor analysis and ranking data
+        - Upgrade opportunity identification
+        
+        **📊 Business Intelligence**
+        - Bulk domain processing capabilities
+        - Excel export functionality
+        - Search history and session management
+        
+        **💳 SaaS Management**
+        - User authentication and authorization
+        - API credit system and monitoring
+        - Payment processing integration
+        - Admin dashboard and controls
+        
+        **🔧 Advanced Features**
+        - Background job scheduling
+        - Email notifications (SMTP)
+        - Multiple payment methods
+        - Real-time credit monitoring
+        """)
+    
+    with tab3:
+        st.markdown("""
+        ### ℹ️ Application Information
+        
+        **Technology Stack:**
+        - Backend: Flask (Python)
+        - Database: PostgreSQL
+        - Frontend: HTML/CSS/JavaScript
+        - Deployment: Replit Platform
+        
+        **Architecture:**
+        - RESTful API design
+        - Role-based access control
+        - Secure payment processing
+        - Scalable microservices approach
+        
+        **Security Features:**
+        - Password hashing with bcrypt
+        - Session management
+        - SQL injection protection
+        - CSRF protection
+        
+        **Performance:**
+        - Background task processing
+        - Database connection pooling
+        - Efficient API rate limiting
+        - Optimized search algorithms
+        """)
+
+if __name__ == "__main__":
+    main()
