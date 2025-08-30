@@ -83,7 +83,9 @@ def create_app():
                 return redirect(url_for('admin_dashboard'))
             else:
                 return redirect(url_for('client_dashboard'))
-        return render_template('index.html')
+        # Show the professional home page with pricing for non-authenticated users
+        pricing_packages = PricingPackage.query.filter_by(is_active=True).order_by(PricingPackage.coins).all()
+        return render_template('home.html', pricing_packages=pricing_packages)
     
     @app.route('/home')
     def home():
