@@ -164,19 +164,30 @@ class APIRotationManager:
                     
                     self._log_system("warning", f"API key {api_key.key_name} failed with {current_max_results} results: {str(e)}")
                     
-                    # If it's a "Query not allowed" error, try with fewer results
-                    if "Query not allowed" in str(e) and current_max_results > 10:
-                        self._log_system("info", f"Trying with fewer results due to query restriction")
-                        break  # Break to try next fallback count
+                    # If it's a "Query not allowed" error, try with fewer results first
+                    if "Query not allowed" in str(e):
+                        if current_max_results > 10:
+                            self._log_system("info", f"Trying with fewer results due to query restriction")
+                            break  # Break to try next fallback count
+                        else:
+                            # If we're already at minimum results and still getting "Query not allowed"
+                            # This query is fundamentally blocked, skip it entirely
+                            self._log_system("warning", f"Query '{query}' is blocked by content policy, skipping")
+                            return [], None
                     
                     # Wait before trying next key (reduced for bulk processing)
                     time.sleep(0.1)
             
             # If we got "Query not allowed", try next fallback count
-            if last_error and "Query not allowed" in last_error and current_max_results > 10:
-                continue
+            if last_error and "Query not allowed" in last_error:
+                if current_max_results > 10:
+                    continue  # Try with fewer results
+                else:
+                    # Query is fundamentally blocked, return empty results
+                    self._log_system("warning", f"Query '{query}' is blocked by content policy after all attempts")
+                    return [], None
             else:
-                break  # If other error or we're already at 10 results, stop trying
+                break  # If other error, stop trying
         
         # All keys and fallbacks failed
         error_msg = f"All API keys failed after {attempts} attempts. Last error: {last_error}"
@@ -204,6 +215,17 @@ class APIRotationManager:
             raise Exception("Rate limit exceeded")
         elif response.status_code == 401:
             raise Exception("Invalid API key")
+        elif response.status_code == 400:
+            # Parse the error message for more specific handling
+            try:
+                error_data = response.json()
+                error_message = error_data.get('message', response.text)
+                if 'Query not allowed' in error_message:
+                    raise Exception(f"Query not allowed. Contact support.")
+                else:
+                    raise Exception(f"HTTP 400: {error_message}")
+            except (ValueError, KeyError):
+                raise Exception(f"HTTP 400: {response.text}")
         elif response.status_code >= 400:
             raise Exception(f"HTTP {response.status_code}: {response.text}")
         
