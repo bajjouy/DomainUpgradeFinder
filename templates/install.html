@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Installation Wizard - Domain Upgrade Pro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-cog"></i> Domain Upgrade Pro SaaS - Installation Wizard
+                </h3>
+                <p class="mb-0 mt-2">Set up your application with this one-time configuration wizard</p>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="installForm">
+                    <!-- Admin Account Section -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-user-shield text-primary"></i> Admin Account
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="admin_email" class="form-label">Admin Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="admin_email" name="admin_email" required>
+                                <div class="form-text">This will be your admin login email</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="admin_password" class="form-label">Admin Password <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control" id="admin_password" name="admin_password" required minlength="6">
+                                <div class="form-text">Minimum 6 characters</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Database Configuration Section -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-database text-success"></i> Database Configuration
+                        </h5>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="use_sqlite" name="use_sqlite" onchange="toggleDatabaseFields()">
+                            <label class="form-check-label" for="use_sqlite">
+                                <strong>Use SQLite (Simple Setup)</strong>
+                                <div class="form-text">Recommended for testing or small deployments</div>
+                            </label>
+                        </div>
+
+                        <div id="postgresql_fields">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="db_host" class="form-label">Database Host</label>
+                                    <input type="text" class="form-control" id="db_host" name="db_host" value="localhost">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="db_port" class="form-label">Database Port</label>
+                                    <input type="number" class="form-control" id="db_port" name="db_port" value="5432">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label for="db_user" class="form-label">Database User</label>
+                                    <input type="text" class="form-control" id="db_user" name="db_user">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="db_password" class="form-label">Database Password</label>
+                                    <input type="password" class="form-control" id="db_password" name="db_password">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="db_name" class="form-label">Database Name</label>
+                                    <input type="text" class="form-control" id="db_name" name="db_name" value="domain_upgrade_pro">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API Keys Section -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-key text-warning"></i> API Keys
+                        </h5>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Required:</strong> Serper API key is needed for core domain analysis functionality.
+                            <br><small>Get your free API key at <a href="https://serper.dev" target="_blank">serper.dev</a></small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <label for="serper_api_key" class="form-label">Serper API Key <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="serper_api_key" name="serper_api_key" required>
+                                <div class="form-text">Required for Google search integration</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Processing Section -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-credit-card text-info"></i> Payment Processing <span class="text-muted">(Optional)</span>
+                        </h5>
+                        
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-lightbulb"></i> 
+                            Payment processing is optional. You can configure these later in the admin panel.
+                        </div>
+
+                        <!-- Stripe Configuration -->
+                        <div class="mb-3">
+                            <h6>Stripe Configuration</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="stripe_public_key" class="form-label">Stripe Public Key</label>
+                                    <input type="text" class="form-control" id="stripe_public_key" name="stripe_public_key" placeholder="pk_test_...">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="stripe_secret_key" class="form-label">Stripe Secret Key</label>
+                                    <input type="password" class="form-control" id="stripe_secret_key" name="stripe_secret_key" placeholder="sk_test_...">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="stripe_webhook_secret" class="form-label">Stripe Webhook Secret</label>
+                                    <input type="password" class="form-control" id="stripe_webhook_secret" name="stripe_webhook_secret" placeholder="whsec_...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PayPal Configuration -->
+                        <div class="mb-3">
+                            <h6>PayPal Configuration</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="paypal_client_id" class="form-label">PayPal Client ID</label>
+                                    <input type="text" class="form-control" id="paypal_client_id" name="paypal_client_id">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="paypal_client_secret" class="form-label">PayPal Client Secret</label>
+                                    <input type="password" class="form-control" id="paypal_client_secret" name="paypal_client_secret">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="paypal_mode" class="form-label">PayPal Mode</label>
+                                    <select class="form-select" id="paypal_mode" name="paypal_mode">
+                                        <option value="sandbox">Sandbox (Testing)</option>
+                                        <option value="live">Live (Production)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Configuration Section -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-envelope text-secondary"></i> Email Configuration <span class="text-muted">(Optional)</span>
+                        </h5>
+                        
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-lightbulb"></i> 
+                            Email configuration is optional. Configure this to send notifications and password resets.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="mail_server" class="form-label">SMTP Server</label>
+                                <input type="text" class="form-control" id="mail_server" name="mail_server" placeholder="smtp.gmail.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mail_port" class="form-label">SMTP Port</label>
+                                <input type="number" class="form-control" id="mail_port" name="mail_port" value="587">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="mail_username" class="form-label">Email Username</label>
+                                <input type="email" class="form-control" id="mail_username" name="mail_username">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mail_password" class="form-label">Email Password</label>
+                                <input type="password" class="form-control" id="mail_password" name="mail_password">
+                                <div class="form-text">Use app password for Gmail</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- App Settings Section -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">
+                            <i class="fas fa-cogs text-dark"></i> Application Settings
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <label for="secret_key" class="form-label">Secret Key</label>
+                                <input type="text" class="form-control" id="secret_key" name="secret_key" placeholder="Leave blank to auto-generate">
+                                <div class="form-text">A secure secret key will be auto-generated if left blank</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg px-5" id="installBtn">
+                            <i class="fas fa-rocket"></i> Complete Installation
+                        </button>
+                        <div class="form-text mt-2">
+                            This will create your .env file, initialize the database, and set up your admin account.
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDatabaseFields() {
+    const useSqlite = document.getElementById('use_sqlite').checked;
+    const postgresqlFields = document.getElementById('postgresql_fields');
+    
+    if (useSqlite) {
+        postgresqlFields.style.display = 'none';
+        // Remove required attributes from PostgreSQL fields
+        document.querySelectorAll('#postgresql_fields input').forEach(input => {
+            input.removeAttribute('required');
+        });
+    } else {
+        postgresqlFields.style.display = 'block';
+        // Add required attributes to PostgreSQL fields
+        document.getElementById('db_user').setAttribute('required', '');
+        document.getElementById('db_password').setAttribute('required', '');
+        document.getElementById('db_name').setAttribute('required', '');
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleDatabaseFields();
+    
+    // Add form submission handler
+    document.getElementById('installForm').addEventListener('submit', function() {
+        const installBtn = document.getElementById('installBtn');
+        installBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Installing...';
+        installBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %}

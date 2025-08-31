@@ -1850,6 +1850,231 @@ This is an automated message from Domain Upgrade Pro.
         flash(f'{payment_method.name} {status} successfully', 'success')
         return redirect(url_for('admin_payment_methods'))
 
+    # Installation Setup Wizard
+    def is_installed():
+        """Check if the application is already installed"""
+        return os.path.exists('installed.lock')
+    
+    def generate_secret_key():
+        """Generate a secure secret key"""
+        import secrets
+        return secrets.token_hex(32)
+    
+    def write_env_file(config_data):
+        """Write configuration to .env file"""
+        env_content = f"""# Domain Upgrade Pro SaaS Configuration
+# Generated automatically by installation wizard
+
+# Flask Configuration
+SECRET_KEY={config_data['secret_key']}
+FLASK_ENV=production
+
+# Database Configuration
+DATABASE_URL={config_data['database_url']}
+
+# API Keys
+SERPER_API_KEY={config_data['serper_api_key']}
+
+# Payment Processing (Optional)
+STRIPE_PUBLIC_KEY={config_data.get('stripe_public_key', '')}
+STRIPE_SECRET_KEY={config_data.get('stripe_secret_key', '')}
+STRIPE_WEBHOOK_SECRET={config_data.get('stripe_webhook_secret', '')}
+
+PAYPAL_CLIENT_ID={config_data.get('paypal_client_id', '')}
+PAYPAL_CLIENT_SECRET={config_data.get('paypal_client_secret', '')}
+PAYPAL_MODE={config_data.get('paypal_mode', 'sandbox')}
+
+# Email Configuration (Optional)
+MAIL_SERVER={config_data.get('mail_server', '')}
+MAIL_PORT={config_data.get('mail_port', '587')}
+MAIL_USE_TLS={config_data.get('mail_use_tls', 'True')}
+MAIL_USERNAME={config_data.get('mail_username', '')}
+MAIL_PASSWORD={config_data.get('mail_password', '')}
+"""
+        
+        with open('.env', 'w') as f:
+            f.write(env_content)
+    
+    def create_admin_user(email, password):
+        """Create the first admin user"""
+        # Check if admin already exists
+        existing_admin = User.query.filter_by(role=UserRole.ADMIN).first()
+        if existing_admin:
+            return False, "Admin user already exists"
+        
+        try:
+            admin_user = User()
+            admin_user.email = email
+            admin_user.password_hash = hash_password(password)
+            admin_user.role = UserRole.ADMIN
+            admin_user.coins = 1000  # Give admin some coins
+            admin_user.trial_coins_used = True  # Admin doesn't need trial coins
+            
+            db.session.add(admin_user)
+            db.session.commit()
+            
+            return True, "Admin user created successfully"
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error creating admin user: {str(e)}"
+    
+    def create_lock_file():
+        """Create installation lock file"""
+        with open('installed.lock', 'w') as f:
+            f.write(f"Installation completed on {datetime.utcnow().isoformat()}\n")
+    
+    @app.route('/install', methods=['GET', 'POST'])
+    def install():
+        # Check if already installed
+        if is_installed():
+            flash('Application is already installed. Please login to continue.', 'info')
+            return redirect(url_for('login'))
+        
+        if request.method == 'POST':
+            try:
+                # Get form data
+                admin_email = request.form.get('admin_email', '').strip()
+                admin_password = request.form.get('admin_password', '').strip()
+                
+                # Database settings
+                db_host = request.form.get('db_host', 'localhost').strip()
+                db_port = request.form.get('db_port', '5432').strip()
+                db_user = request.form.get('db_user', '').strip()
+                db_password = request.form.get('db_password', '').strip()
+                db_name = request.form.get('db_name', 'domain_upgrade_pro').strip()
+                use_sqlite = request.form.get('use_sqlite') == 'on'
+                
+                # API Keys
+                serper_api_key = request.form.get('serper_api_key', '').strip()
+                
+                # Optional API Keys
+                stripe_public_key = request.form.get('stripe_public_key', '').strip()
+                stripe_secret_key = request.form.get('stripe_secret_key', '').strip()
+                stripe_webhook_secret = request.form.get('stripe_webhook_secret', '').strip()
+                
+                paypal_client_id = request.form.get('paypal_client_id', '').strip()
+                paypal_client_secret = request.form.get('paypal_client_secret', '').strip()
+                paypal_mode = request.form.get('paypal_mode', 'sandbox').strip()
+                
+                # Email settings
+                mail_server = request.form.get('mail_server', '').strip()
+                mail_port = request.form.get('mail_port', '587').strip()
+                mail_username = request.form.get('mail_username', '').strip()
+                mail_password = request.form.get('mail_password', '').strip()
+                
+                # App settings
+                secret_key = request.form.get('secret_key', '').strip()
+                if not secret_key:
+                    secret_key = generate_secret_key()
+                
+                # Validation
+                errors = []
+                
+                if not admin_email or '@' not in admin_email:
+                    errors.append('Valid admin email is required')
+                
+                if not admin_password or len(admin_password) < 6:
+                    errors.append('Admin password must be at least 6 characters')
+                
+                if not serper_api_key:
+                    errors.append('Serper API key is required for core functionality')
+                
+                if use_sqlite:
+                    database_url = 'sqlite:///app.db'
+                else:
+                    if not all([db_user, db_password, db_name]):
+                        errors.append('Database user, password, and name are required for PostgreSQL')
+                    else:
+                        database_url = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
+                
+                if errors:
+                    for error in errors:
+                        flash(error, 'error')
+                    return render_template('install.html')
+                
+                # Prepare configuration data
+                config_data = {
+                    'secret_key': secret_key,
+                    'database_url': database_url,
+                    'serper_api_key': serper_api_key,
+                    'stripe_public_key': stripe_public_key,
+                    'stripe_secret_key': stripe_secret_key,
+                    'stripe_webhook_secret': stripe_webhook_secret,
+                    'paypal_client_id': paypal_client_id,
+                    'paypal_client_secret': paypal_client_secret,
+                    'paypal_mode': paypal_mode,
+                    'mail_server': mail_server,
+                    'mail_port': mail_port,
+                    'mail_use_tls': 'True',
+                    'mail_username': mail_username,
+                    'mail_password': mail_password
+                }
+                
+                # Write .env file
+                write_env_file(config_data)
+                
+                # Initialize database
+                try:
+                    db.create_all()
+                    
+                    # Create default pricing packages if they don't exist
+                    if not PricingPackage.query.first():
+                        packages = [
+                            PricingPackage(name='Starter Pack', coins=100, price_cents=1000),  # $10
+                            PricingPackage(name='Professional Pack', coins=500, price_cents=4000),  # $40
+                            PricingPackage(name='Enterprise Pack', coins=1000, price_cents=7500),  # $75
+                        ]
+                        for package in packages:
+                            db.session.add(package)
+                        db.session.commit()
+                    
+                except Exception as e:
+                    flash(f'Database initialization failed: {str(e)}', 'error')
+                    # Clean up .env file on failure
+                    if os.path.exists('.env'):
+                        os.remove('.env')
+                    return render_template('install.html')
+                
+                # Create admin user
+                success, message = create_admin_user(admin_email, admin_password)
+                if not success:
+                    flash(f'Admin user creation failed: {message}', 'error')
+                    # Clean up on failure
+                    if os.path.exists('.env'):
+                        os.remove('.env')
+                    return render_template('install.html')
+                
+                # Create lock file
+                create_lock_file()
+                
+                # Success message
+                flash('🎉 Installation completed successfully! You can now login with your admin credentials.', 'success')
+                flash('⚠️ Please restart the application to load the new configuration.', 'warning')
+                
+                # Auto-login the admin user
+                try:
+                    admin_user = User.query.filter_by(email=admin_email).first()
+                    if admin_user:
+                        login_user(admin_user)
+                        return redirect(url_for('admin_dashboard'))
+                except Exception as e:
+                    # If auto-login fails, just redirect to login
+                    pass
+                
+                return redirect(url_for('login'))
+                
+            except Exception as e:
+                flash(f'Installation failed: {str(e)}', 'error')
+                # Clean up on failure
+                if os.path.exists('.env'):
+                    os.remove('.env')
+                if os.path.exists('installed.lock'):
+                    os.remove('installed.lock')
+                return render_template('install.html')
+        
+        # GET request - show installation form
+        return render_template('install.html')
+
     return app
 
 if __name__ == '__main__':
