@@ -754,7 +754,7 @@ def create_app():
                 return redirect(url_for('buy_coins'))
             
             # Check for bulk processing limits
-            max_bulk_keywords = 500  # Configurable limit
+            max_bulk_keywords = 5000  # Configurable limit
             if total_searches > max_bulk_keywords:
                 flash(f'Maximum {max_bulk_keywords} keywords allowed per search session. You entered {total_searches} keywords.', 'error')
                 return render_template('client/search.html')
