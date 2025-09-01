@@ -351,6 +351,13 @@ class BusinessSearchService:
                     break
                 
                 page_businesses = search_results.get('businesses', [])
+                
+                # Add rank information to each result
+                for i, business in enumerate(page_businesses):
+                    business['Rank'] = start_index + i + 1  # Global rank across all pages
+                    business['Keywords Found'] = keyword
+                    business['Search Date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
                 all_results.extend(page_businesses)
                 
                 logger.info(f"✅ Page {page}: Found {len(page_businesses)} URLs (Total: {len(all_results)}/{max_results})")

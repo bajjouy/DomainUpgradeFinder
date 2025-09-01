@@ -328,21 +328,17 @@ def _extract_web_result_from_search(result: Dict) -> Optional[Dict]:
     if is_non_useful or not link or not title:
         return None
     
+    # Extract domain from URL for domain analysis
+    domain = link.replace('https://', '').replace('http://', '').split('/')[0]
+    
     return {
-        'name': title.strip(),  # Page title
-        'website': link,        # URL
-        'description': snippet.strip(),  # Page snippet/description
-        'phone': '',           # Not needed for URL/title focus
-        'rating': None,        # Not needed for URL/title focus
-        'address': '',         # Not needed for URL/title focus
-        'user_ratings_total': None,
-        'price_level': None,
-        'business_status': 'UNKNOWN',
-        'types': [],
-        'latitude': None,
-        'longitude': None,
-        'place_id': '',
-        'opening_hours': [],
+        'Title': title.strip(),                    # Page title
+        'URL': link,                              # Full URL
+        'Description': snippet.strip(),           # Page description/snippet
+        'Domain': domain,                         # Domain name for analysis
+        'Rank': None,                             # Will be set during pagination
+        'Keywords Found': '',                     # Will be set by search service
+        'Search Date': '',                        # Will be set by search service
         'source': 'google_web_search'
     }
 

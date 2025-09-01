@@ -2520,11 +2520,10 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         # Prepare CSV data
         output = io.StringIO()
         
-        # Write CSV
+        # Write CSV for web search results
         fieldnames = [
-            'Business Name', 'Address', 'City', 'Phone', 'Website', 'Email',
-            'Rating', 'Total Reviews', 'Price Level', 'Business Status',
-            'Business Types', 'Latitude', 'Longitude', 'Keywords Found', 'Search Date'
+            'Title', 'URL', 'Description', 'Domain', 'Rank', 
+            'Keywords Found', 'Search Date'
         ]
         
         writer = csv.DictWriter(output, fieldnames=fieldnames)
