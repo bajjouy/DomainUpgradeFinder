@@ -41,20 +41,20 @@
         }
 
         [data-theme="dark"] {
-            /* Dark Mode Colors - Professional & Easy on Eyes */
-            --bg-color: #0a0e1a;           /* Very dark blue-gray for depth */
-            --bg-secondary: #1a202c;       /* Dark gray-blue for panels */
-            --bg-tertiary: #2d3748;        /* Medium dark for sections */
-            --text-primary: #f7fafc;       /* Off-white for better readability */
-            --text-secondary: #e2e8f0;     /* Light gray for secondary text */
-            --text-muted: #a0aec0;         /* Medium gray for muted text */
-            --border-color: #2d3748;       /* Dark gray borders */
-            --border-light: #4a5568;       /* Lighter dark borders */
-            --card-bg: #1a202c;            /* Dark panels with slight blue tint */
-            --navbar-bg: linear-gradient(135deg, #0a0e1a 0%, #1a202c 100%);
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+            /* Dark Mode Colors - Warm & Comfortable */
+            --bg-color: #1c1917;           /* Warm dark stone for comfort */
+            --bg-secondary: #292524;       /* Warm gray for panels */
+            --bg-tertiary: #3c3631;        /* Medium warm gray for sections */
+            --text-primary: #fafaf9;       /* Warm white for excellent readability */
+            --text-secondary: #e7e5e4;     /* Light warm gray for secondary text */
+            --text-muted: #a8a29e;         /* Medium warm gray for muted text */
+            --border-color: #3c3631;       /* Warm dark borders */
+            --border-light: #57534e;       /* Lighter warm borders */
+            --card-bg: #292524;            /* Warm dark panels */
+            --navbar-bg: linear-gradient(135deg, var(--primary-color) 0%, #3730a3 100%);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
         }
 
         * {
@@ -170,8 +170,20 @@
         }
 
         [data-theme="dark"] .coin-badge {
-            color: #fbbf24;
-            border-color: rgba(251, 191, 36, 0.4);
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #fef3c7;
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        [data-theme="dark"] .form-control {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .form-control:focus {
+            background-color: var(--card-bg);
+            border-color: var(--primary-light);
         }
 
         /* Main Content */
@@ -329,23 +341,27 @@
         }
 
         [data-theme="dark"] .alert-success {
-            background: rgba(5, 150, 105, 0.15);
-            color: #10b981;
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border-left-color: #34d399;
         }
 
         [data-theme="dark"] .alert-danger {
-            background: rgba(220, 38, 38, 0.15);
-            color: #f87171;
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border-left-color: #fca5a5;
         }
 
         [data-theme="dark"] .alert-warning {
-            background: rgba(217, 119, 6, 0.15);
-            color: #fbbf24;
+            background: rgba(245, 158, 11, 0.2);
+            color: #fcd34d;
+            border-left-color: #fcd34d;
         }
 
         [data-theme="dark"] .alert-info {
-            background: rgba(8, 145, 178, 0.15);
-            color: #38bdf8;
+            background: rgba(14, 165, 233, 0.2);
+            color: #60a5fa;
+            border-left-color: #60a5fa;
         }
 
         /* Tables */
