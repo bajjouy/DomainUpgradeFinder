@@ -69,86 +69,91 @@ class BusinessSearchService:
         Args:
             session_id: ID of search session to process
         """
+        from app_flask import create_app
+        
         try:
-            session = BusinessSearchSession.query.get(session_id)
-            if not session:
-                logger.error(f"Session {session_id} not found")
-                return
+            # Create Flask app context for background thread
+            app = create_app()
+            with app.app_context():
+                session = BusinessSearchSession.query.get(session_id)
+                if not session:
+                    logger.error(f"Session {session_id} not found")
+                    return
             
-            start_time = time.time()
-            cities = session.get_cities_list()
-            total_cities = len(cities)
-            total_businesses_found = 0
+                start_time = time.time()
+                cities = session.get_cities_list()
+                total_cities = len(cities)
+                total_businesses_found = 0
+                
+                self.active_sessions[session_id] = {
+                    'status': 'processing',
+                    'progress': 0.0,
+                    'current_location': None,
+                    'total_businesses': 0
+                }
             
-            self.active_sessions[session_id] = {
-                'status': 'processing',
-                'progress': 0.0,
-                'current_location': None,
-                'total_businesses': 0
-            }
-            
-            logger.info(f"Processing {len(cities)} cities for session {session_id}")
-            
-            for i, city in enumerate(cities):
-                try:
-                    # Update progress
-                    progress = (i / total_cities) * 100
-                    session.progress = progress
-                    session.current_location = city
-                    
-                    self.active_sessions[session_id].update({
-                        'progress': progress,
-                        'current_location': city
-                    })
-                    
-                    db.session.commit()
-                    
-                    # Search businesses in this city
-                    businesses = self._search_businesses_in_city(
-                        session.keywords, city, session.max_results_per_city
-                    )
-                    
-                    # Save businesses to database
-                    for business_data in businesses:
-                        business = BusinessData()
-                        business.session_id = session.id
-                        business.user_id = session.user_id
-                        business.keywords_searched = session.keywords
-                        business.city = city
+                logger.info(f"Processing {len(cities)} cities for session {session_id}")
+                
+                for i, city in enumerate(cities):
+                    try:
+                        # Update progress
+                        progress = (i / total_cities) * 100
+                        session.progress = progress
+                        session.current_location = city
                         
-                        # Map business data
-                        business.name = business_data.get('name', '')
-                        business.address = business_data.get('address', '')
-                        business.phone = business_data.get('phone', '')
-                        business.website = business_data.get('website', '')
-                        business.rating = business_data.get('rating')
-                        business.user_ratings_total = business_data.get('user_ratings_total')
-                        business.price_level = business_data.get('price_level')
-                        business.business_status = business_data.get('business_status', '')
-                        business.latitude = business_data.get('latitude')
-                        business.longitude = business_data.get('longitude')
-                        business.place_id = business_data.get('place_id', '')
+                        self.active_sessions[session_id].update({
+                            'progress': progress,
+                            'current_location': city
+                        })
                         
-                        # Set JSON fields
-                        business.set_types_list(business_data.get('types', []))
-                        business.opening_hours = json.dumps(business_data.get('opening_hours', []))
+                        db.session.commit()
                         
-                        # Try to extract email from website
-                        if business.website:
-                            business.email = extract_email_from_website(business.website)
+                        # Search businesses in this city
+                        businesses = self._search_businesses_in_city(
+                            session.keywords, city, session.max_results_per_city
+                        )
                         
-                        db.session.add(business)
-                        total_businesses_found += 1
-                    
-                    db.session.commit()
-                    logger.info(f"Found {len(businesses)} businesses in {city}")
-                    
-                    # Small delay to respect rate limits
-                    time.sleep(0.5)
-                    
-                except Exception as e:
-                    logger.error(f"Error processing city {city}: {str(e)}")
-                    continue
+                        # Save businesses to database
+                        for business_data in businesses:
+                            business = BusinessData()
+                            business.session_id = session.id
+                            business.user_id = session.user_id
+                            business.keywords_searched = session.keywords
+                            business.city = city
+                            
+                            # Map business data
+                            business.name = business_data.get('name', '')
+                            business.address = business_data.get('address', '')
+                            business.phone = business_data.get('phone', '')
+                            business.website = business_data.get('website', '')
+                            business.rating = business_data.get('rating')
+                            business.user_ratings_total = business_data.get('user_ratings_total')
+                            business.price_level = business_data.get('price_level')
+                            business.business_status = business_data.get('business_status', '')
+                            business.latitude = business_data.get('latitude')
+                            business.longitude = business_data.get('longitude')
+                            business.place_id = business_data.get('place_id', '')
+                            
+                            # Set JSON fields
+                            business.set_types_list(business_data.get('types', []))
+                            business.opening_hours = json.dumps(business_data.get('opening_hours', []))
+                            
+                            # Try to extract email from website
+                            if business.website:
+                                business.email = extract_email_from_website(business.website)
+                            
+                            db.session.add(business)
+                            total_businesses_found += 1
+                        
+                        db.session.commit()
+                        logger.info(f"Found {len(businesses)} businesses in {city}")
+                        
+                        # Small delay to respect rate limits
+                        time.sleep(0.5)
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing city {city}: {str(e)}")
+                        continue
             
             # Mark session as completed
             end_time = time.time()
