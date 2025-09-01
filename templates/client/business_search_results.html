@@ -1,50 +1,91 @@
 {% extends "base.html" %}
 
-{% block title %}Business Search Results{% endblock %}
+{% block title %}Bulk Search Results{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2><i class="fas fa-map-marked-alt"></i> Business Search Results</h2>
+        <h2><i class="fas fa-search"></i> Bulk Search Results</h2>
         <p class="text-muted">
-            Found <strong>{{ results.total_businesses }}</strong> businesses for 
-            "<strong>{{ results.session.keywords }}</strong>" across {{ results.session.cities|length }} cities
+            Found <strong>{{ results.total_businesses }}</strong> URLs for bulk search of multiple keywords
         </p>
         <hr>
     </div>
 </div>
 
+<!-- Keyword Summary Table -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-table"></i> Keyword Analysis Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Keyword</th>
+                                <th class="text-center">URLs Found</th>
+                                <th class="text-center">Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set keyword_counts = {} %}
+                            {% for business in results.businesses %}
+                                {% set keyword = business.keywords_searched %}
+                                {% if keyword_counts.update({keyword: keyword_counts.get(keyword, 0) + 1}) %}{% endif %}
+                            {% endfor %}
+                            
+                            {% for keyword, count in keyword_counts.items() %}
+                            <tr>
+                                <td><strong>{{ keyword }}</strong></td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary">{{ count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    {{ "%.1f"|format((count / results.total_businesses * 100) if results.total_businesses > 0 else 0) }}%
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th>Total</th>
+                                <th class="text-center">{{ results.total_businesses }} URLs</th>
+                                <th class="text-center">100%</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Summary Stats -->
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="card bg-success text-white">
             <div class="card-body text-center">
                 <h4>{{ results.total_businesses }}</h4>
-                <small>Total Businesses</small>
+                <small>Total URLs Found</small>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="card bg-info text-white">
             <div class="card-body text-center">
-                <h4>{{ results.session.cities|length }}</h4>
-                <small>Cities Searched</small>
+                <h4>{{ keyword_counts|length if keyword_counts else 0 }}</h4>
+                <small>Keywords Searched</small>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <div class="card bg-primary text-white">
             <div class="card-body text-center">
                 <h4>{{ "%.1f"|format(results.session.processing_time or 0) }}s</h4>
                 <small>Processing Time</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-white">
-            <div class="card-body text-center">
-                <h4>{{ "%.1f"|format((results.total_businesses / results.session.cities|length) if results.session.cities|length > 0 else 0) }}</h4>
-                <small>Avg. per City</small>
             </div>
         </div>
     </div>

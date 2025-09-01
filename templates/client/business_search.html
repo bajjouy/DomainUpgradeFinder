@@ -5,8 +5,8 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2><i class="fas fa-search"></i> Google Search</h2>
-        <p class="text-muted">Search Google for any keywords and get clean results with URLs and titles.</p>
+        <h2><i class="fas fa-search"></i> Bulk Google Search</h2>
+        <p class="text-muted">Search multiple keywords on Google and get maximum URLs and titles from all available pages.</p>
         <hr>
     </div>
 </div>
@@ -15,7 +15,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5>Google Search</h5>
+                <h5>Bulk Google Search</h5>
                 <small class="text-muted">You have {{ current_user.coins }} coins available</small>
             </div>
             <div class="card-body">
@@ -23,21 +23,21 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
                     <div class="mb-3">
-                        <label for="keywords" class="form-label">Search Query</label>
-                        <input type="text" class="form-control form-control-lg" id="keywords" name="keywords" 
-                               placeholder="Enter anything you want to search on Google..." required>
+                        <label for="keywords" class="form-label">Search Keywords (one per line)</label>
+                        <textarea class="form-control" id="keywords" name="keywords" rows="8" 
+                                placeholder="plumber&#10;lawyer&#10;web design&#10;marketing agency&#10;coffee shop&#10;pizza restaurant&#10;dentist&#10;electrician" required></textarea>
                         <div class="form-text">
-                            Just type your search query - we'll return URLs and titles from Google results
+                            Enter one keyword per line - we'll search each keyword and get maximum URLs from all Google pages
                         </div>
                     </div>
                     
                     <!-- Hidden fields to maintain backend compatibility -->
                     <input type="hidden" name="cities" value="global">
-                    <input type="hidden" name="max_results" value="50">
+                    <input type="hidden" name="max_results" value="500">
                     
                     {% if current_user.coins > 0 %}
                     <button type="submit" class="btn btn-primary btn-lg w-100" id="searchBtn">
-                        <i class="fas fa-search"></i> Search Google
+                        <i class="fas fa-search"></i> Start Bulk Search
                     </button>
                     {% else %}
                     <a href="{{ url_for('buy_coins') }}" class="btn btn-warning w-100">
@@ -52,24 +52,25 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5>Simple Google Search</h5>
+                <h5>Bulk Google Search</h5>
             </div>
             <div class="card-body">
                 <ol>
-                    <li><strong>Enter Query:</strong> Type anything you want to search</li>
-                    <li><strong>Get Results:</strong> Clean Google search results with:</li>
+                    <li><strong>Enter Keywords:</strong> One keyword per line</li>
+                    <li><strong>Maximum Results:</strong> We search all Google pages to get maximum URLs</li>
+                    <li><strong>Summary Table:</strong> Get keyword vs URL count summary</li>
                 </ol>
                 
                 <ul class="list-unstyled mt-3">
-                    <li><i class="fas fa-check text-success"></i> Website URLs</li>
+                    <li><i class="fas fa-check text-success"></i> Maximum Website URLs</li>
                     <li><i class="fas fa-check text-success"></i> Page titles</li>
                     <li><i class="fas fa-check text-success"></i> Search rankings</li>
-                    <li><i class="fas fa-check text-success"></i> Page descriptions</li>
+                    <li><i class="fas fa-check text-success"></i> Keyword analysis table</li>
                 </ul>
                 
-                <div class="alert alert-info small">
-                    <i class="fas fa-info-circle"></i> 
-                    <strong>Focus:</strong> Results prioritize URLs and titles for easy browsing.
+                <div class="alert alert-success small">
+                    <i class="fas fa-rocket"></i> 
+                    <strong>Maximum Coverage:</strong> Searches all available pages for each keyword.
                 </div>
             </div>
         </div>
@@ -84,10 +85,11 @@
                     <strong>Try searching for:</strong>
                 </p>
                 <ul class="small">
-                    <li>"pizza restaurants Dallas"</li>
-                    <li>"web design companies"</li>
-                    <li>"law firms New York"</li>
-                    <li>"marketing agencies"</li>
+                    <li>plumber</li>
+                    <li>lawyer</li>
+                    <li>web design</li>
+                    <li>marketing agency</li>
+                    <li>coffee shop</li>
                 </ul>
                 
                 <div class="alert alert-info small mb-0">

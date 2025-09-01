@@ -108,11 +108,27 @@ class BusinessSearchService:
                         
                         db.session.commit()
                         
-                        # Handle simple Google search (no location if city is "global")
-                        search_location = None if city.lower() == "global" else city
-                        businesses = self._search_businesses_paginated(
-                            session.keywords, search_location, session.max_results_per_city, session_id
-                        )
+                        # Handle bulk search - split keywords by newlines
+                        keywords_list = [kw.strip() for kw in session.keywords.split('\n') if kw.strip()]
+                        all_businesses = []
+                        
+                        for keyword in keywords_list:
+                            logger.info(f"🔍 Searching for keyword: '{keyword}'")
+                            
+                            # Handle simple Google search (no location if city is "global")
+                            search_location = None if city.lower() == "global" else city
+                            businesses = self._search_businesses_paginated(
+                                keyword, search_location, session.max_results_per_city, session_id
+                            )
+                            
+                            # Tag each business with the specific keyword used
+                            for business in businesses:
+                                business['search_keyword'] = keyword
+                            
+                            all_businesses.extend(businesses)
+                            logger.info(f"✅ Found {len(businesses)} results for '{keyword}'")
+                        
+                        businesses = all_businesses
                         
                         # Save businesses page by page with real-time updates
                         saved_count = 0
@@ -121,7 +137,7 @@ class BusinessSearchService:
                                 business = BusinessData()
                                 business.session_id = session.id
                                 business.user_id = session.user_id
-                                business.keywords_searched = session.keywords
+                                business.keywords_searched = business_data.get('search_keyword', session.keywords)
                                 business.city = city
                                 
                                 # Focus on URLs and titles (simplified data)
