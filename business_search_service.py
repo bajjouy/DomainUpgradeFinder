@@ -108,13 +108,14 @@ class BusinessSearchService:
                         
                         db.session.commit()
                         
-                        # Search businesses in this city
-                        businesses = self._search_businesses_in_city(
-                            session.keywords, city, session.max_results_per_city
+                        # Search businesses in this city page by page
+                        businesses = self._search_businesses_paginated(
+                            session.keywords, city, session.max_results_per_city, session_id
                         )
                         
-                        # Save businesses to database
-                        for business_data in businesses:
+                        # Save businesses page by page with real-time updates
+                        saved_count = 0
+                        for i, business_data in enumerate(businesses, 1):
                             try:
                                 business = BusinessData()
                                 business.session_id = session.id
@@ -135,29 +136,50 @@ class BusinessSearchService:
                                 business.longitude = business_data.get('longitude')
                                 business.place_id = business_data.get('place_id', '')
                                 
-                                # Set JSON fields
-                                business.set_types_list(business_data.get('types', []))
-                                business.opening_hours = json.dumps(business_data.get('opening_hours', []))
+                                # Set JSON fields safely
+                                try:
+                                    business.set_types_list(business_data.get('types', []))
+                                except:
+                                    business.types = json.dumps([])
+                                    
+                                try:
+                                    business.opening_hours = json.dumps(business_data.get('opening_hours', []))
+                                except:
+                                    business.opening_hours = json.dumps([])
                                 
                                 # Try to extract email from website
-                                if business.website:
-                                    business.email = extract_email_from_website(business.website)
+                                try:
+                                    if business.website:
+                                        business.email = extract_email_from_website(business.website)
+                                except:
+                                    business.email = None
                                 
                                 db.session.add(business)
-                                total_businesses_found += 1
+                                db.session.flush()  # Flush to catch errors early
+                                saved_count += 1
+                                
+                                # Update progress per business found
+                                if i % 5 == 0:  # Update every 5 businesses
+                                    session.current_location = f"{city} - {saved_count}/{len(businesses)} businesses saved"
+                                    self.active_sessions[session_id].update({
+                                        'current_location': session.current_location,
+                                        'total_businesses': total_businesses_found + saved_count
+                                    })
+                                    db.session.commit()
+                                    
                             except Exception as e:
                                 logger.error(f"Error saving business {business_data.get('name', 'Unknown')}: {str(e)}")
+                                db.session.rollback()
                                 continue
                         
-                        # Commit businesses for this city
+                        # Final commit for this city
                         try:
                             db.session.commit()
-                            logger.info(f"Successfully committed {len(businesses)} businesses for {city}")
+                            total_businesses_found += saved_count
+                            logger.info(f"✅ Successfully saved {saved_count}/{len(businesses)} businesses for {city}")
                         except Exception as e:
-                            logger.error(f"Error committing businesses for {city}: {str(e)}")
+                            logger.error(f"❌ Error committing businesses for {city}: {str(e)}")
                             db.session.rollback()
-                            # Reset counter since businesses weren't saved
-                            total_businesses_found -= len(businesses)
                         logger.info(f"Found {len(businesses)} businesses in {city}")
                         
                         # Small delay to respect rate limits
@@ -212,9 +234,72 @@ class BusinessSearchService:
             except:
                 pass
     
-    def _search_businesses_in_city(self, keywords: str, city: str, max_results: int) -> List[Dict]:
+    def _search_businesses_paginated(self, keywords: str, city: str, max_results: int, session_id: int) -> List[Dict]:
         """
-        Search for businesses in a specific city using Serper.dev
+        Search businesses page by page with real-time updates
+        
+        Args:
+            keywords: Business keywords to search for
+            city: City to search in
+            max_results: Maximum total results to find
+            session_id: Session ID for progress updates
+        
+        Returns:
+            List of all business data found across pages
+        """
+        all_businesses = []
+        page = 1
+        per_page = 20  # Get 20 results per page
+        total_found = 0
+        
+        logger.info(f"🔍 Starting paginated search for '{keywords}' in {city} (max {max_results} results)")
+        
+        while total_found < max_results:
+            remaining = max_results - total_found
+            current_page_size = min(per_page, remaining)
+            
+            logger.info(f"📄 Searching page {page} ({current_page_size} results)...")
+            
+            # Update progress to show current page being searched
+            if session_id in self.active_sessions:
+                self.active_sessions[session_id].update({
+                    'current_location': f"{city} - Page {page} (searching...)",
+                    'total_businesses': total_found
+                })
+            
+            # Search this page
+            page_businesses = self._search_single_page(keywords, city, current_page_size)
+            
+            if not page_businesses:
+                logger.info(f"🛑 No more results found on page {page}, stopping search")
+                break
+                
+            all_businesses.extend(page_businesses)
+            total_found += len(page_businesses)
+            
+            # Update progress with page results
+            if session_id in self.active_sessions:
+                self.active_sessions[session_id].update({
+                    'current_location': f"{city} - Page {page}: {len(page_businesses)} businesses found (Total: {total_found})",
+                    'total_businesses': total_found
+                })
+            
+            logger.info(f"✅ Page {page}: Found {len(page_businesses)} businesses (Total: {total_found}/{max_results})")
+            
+            # If we got fewer results than requested, we've reached the end
+            if len(page_businesses) < current_page_size:
+                logger.info(f"🏁 Reached end of results (got {len(page_businesses)}, expected {current_page_size})")
+                break
+                
+            page += 1
+            time.sleep(1)  # Rate limiting between pages
+        
+        logger.info(f"🎯 Completed search for {city}: {total_found} total businesses found across {page} pages")
+        return all_businesses
+    
+    def _search_single_page(self, keywords: str, city: str, max_results: int) -> List[Dict]:
+        """
+        Search for businesses in a specific city (single page) using Serper.dev
         
         Args:
             keywords: Business keywords to search for
