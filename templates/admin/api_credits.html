@@ -2,6 +2,10 @@
 
 {% block title %}API Credits Management{% endblock %}
 
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-12">
@@ -294,10 +298,12 @@ function checkLiveCredits(keyName, keyId) {
     contentDiv.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Checking live credits for <strong>${keyName}</strong>...</p>`;
     
     // Make API call to check single key
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     fetch(`/admin/api-credits/${keyId}/check-live`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         }
     })
     .then(response => response.json())
