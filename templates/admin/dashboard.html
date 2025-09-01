@@ -1,84 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Dashboard{% endblock %}
+{% block title %}Admin Dashboard - Domain Upgrade Pro{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h2>
-        <hr>
-    </div>
-</div>
-
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4>{{ total_users }}</h4>
-                        <span>Total Users</span>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-users fa-2x"></i>
-                    </div>
-                </div>
+<!-- Header Section -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="bg-primary rounded-circle p-3 me-3">
+                <i class="fas fa-tachometer-alt text-white fs-4"></i>
+            </div>
+            <div>
+                <h1 class="mb-1 fw-bold">Admin Dashboard</h1>
+                <p class="text-muted mb-0">Monitor and manage your Domain Upgrade Pro platform</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4>{{ total_searches }}</h4>
-                        <span>Total Searches</span>
-                        <small class="d-block">≈{{ total_searches }} API credits used</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-search fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4>${{ "%.2f"|format(total_revenue) }}</h4>
-                        <span>Total Revenue</span>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-dollar-sign fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card {{ 'bg-danger' if low_credit_keys|length > 0 else 'bg-info' }} text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4>{{ "{:,.0f}".format(total_remaining) }}</h4>
-                        <span>API Credits Remaining</span>
-                        <small class="d-block">Total: {{ "{:,.0f}".format(total_credits) }}</small>
-                        {% if is_live_data %}
-                            <span class="badge bg-success mt-1">🔴 LIVE DATA</span>
-                        {% else %}
-                            <span class="badge bg-warning mt-1">📊 DATABASE</span>
-                        {% endif %}
-                        {% if low_credit_keys|length > 0 %}
-                            <small class="d-block">⚠️ {{ low_credit_keys|length }} low credit alerts</small>
-                        {% endif %}
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-credit-card fa-2x"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="col-md-4 text-end">
+        <div class="d-flex align-items-center justify-content-end">
+            {% if is_live_data %}
+                <span class="badge bg-success fs-6 me-2">
+                    <i class="fas fa-wifi me-1"></i>Live Data
+                </span>
+            {% else %}
+                <span class="badge bg-warning fs-6 me-2">
+                    <i class="fas fa-database me-1"></i>Cached Data
+                </span>
+            {% endif %}
+            <small class="text-muted">Last updated: {{ moment().format('MMM DD, YYYY HH:mm') }}</small>
         </div>
     </div>
 </div>
@@ -87,61 +36,99 @@
 {% if low_credit_keys|length > 0 %}
 <div class="row mb-4">
     <div class="col-12">
-        <div class="alert alert-danger alert-dismissible fade show">
-            <h5><i class="fas fa-exclamation-triangle"></i> API Credit Alert</h5>
-            <p><strong>{{ low_credit_keys|length }} API key(s)</strong> have less than 500 credits remaining. <a href="{{ url_for('admin_api_credits') }}" class="alert-link">View detailed credit status →</a></p>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-danger border-0 shadow-sm">
+            <div class="d-flex align-items-center">
+                <div class="bg-white rounded-circle p-2 me-3">
+                    <i class="fas fa-exclamation-triangle text-danger"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1 fw-bold">Critical: API Credit Alert</h6>
+                    <p class="mb-0">{{ low_credit_keys|length }} API key(s) have less than 500 credits remaining</p>
+                </div>
+                <a href="{{ url_for('admin_api_credits') }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-right me-1"></i>View Details
+                </a>
+            </div>
         </div>
     </div>
 </div>
 {% endif %}
 
-<!-- API Credits vs Coins Economics -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-info">
-            <div class="card-header bg-info text-white">
-                <h5><i class="fas fa-calculator"></i> Credit Economics Overview</h5>
-            </div>
+<!-- Key Metrics Cards -->
+<div class="row g-4 mb-5">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <h6>API Cost Structure</h6>
-                        <ul class="mb-0">
-                            <li><strong>1 API credit</strong> per domain search</li>
-                            <li><strong>1 coin</strong> = 1 domain search</li>
-                            <li><strong>Ratio:</strong> 1 API credit → 1 client coin</li>
-                        </ul>
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-gradient rounded-3 p-3 me-3">
+                        <i class="fas fa-users text-white fa-lg"></i>
                     </div>
-                    <div class="col-md-4">
-                        <h6>Current Capacity</h6>
-                        <ul class="mb-0">
-                            <li><strong>{{ "{:,.0f}".format(total_remaining) }}</strong> API credits available</li>
-                            <li><strong>{{ total_remaining|int }}</strong> client searches possible</li>
-                            <li><strong>{{ (total_remaining / 100)|int }} packages</strong> of 100 coins sellable</li>
-                            {% if is_live_data %}
-                                <li><small class="text-success">✅ Live data from Serper API</small></li>
-                            {% else %}
-                                <li><small class="text-warning">⚠️ Database estimates - not live API data</small></li>
-                            {% endif %}
-                        </ul>
+                    <div class="flex-grow-1">
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Users</div>
+                        <div class="h4 fw-bold mb-0">{{ "{:,}".format(total_users) }}</div>
+                        <div class="text-success small">
+                            <i class="fas fa-arrow-up me-1"></i>Active accounts
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <h6>Recommendations</h6>
-                        {% if total_remaining < 1500 %}
-                            <div class="alert alert-danger py-2 mb-0">
-                                <strong>⚠️ Low Credits!</strong><br>
-                                Add more API keys or credits soon.
-                            </div>
-                        {% elif total_remaining < 5000 %}
-                            <div class="alert alert-warning py-2 mb-0">
-                                <strong>🟡 Medium Credits</strong><br>
-                                Consider adding backup API keys.
-                            </div>
-                        {% else %}
-                            <div class="alert alert-success py-2 mb-0">
-                                <strong>✅ Good Credits</strong><br>
-                                API capacity looks healthy.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success bg-gradient rounded-3 p-3 me-3">
+                        <i class="fas fa-search text-white fa-lg"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Searches</div>
+                        <div class="h4 fw-bold mb-0">{{ "{:,}".format(total_searches) }}</div>
+                        <div class="text-muted small">
+                            <i class="fas fa-bolt me-1"></i>{{ "{:,}".format(total_searches) }} API calls
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning bg-gradient rounded-3 p-3 me-3">
+                        <i class="fas fa-dollar-sign text-white fa-lg"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Revenue</div>
+                        <div class="h4 fw-bold mb-0">${{ "%.2f"|format(total_revenue) }}</div>
+                        <div class="text-success small">
+                            <i class="fas fa-chart-line me-1"></i>Revenue growth
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-{{ 'danger' if low_credit_keys|length > 0 else 'info' }} bg-gradient rounded-3 p-3 me-3">
+                        <i class="fas fa-credit-card text-white fa-lg"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">API Credits</div>
+                        <div class="h4 fw-bold mb-0">{{ "{:,}".format(total_remaining) }}</div>
+                        <div class="text-muted small">
+                            <i class="fas fa-database me-1"></i>of {{ "{:,}".format(total_credits) }} total
+                        </div>
+                        {% if low_credit_keys|length > 0 %}
+                            <div class="text-danger small mt-1">
+                                <i class="fas fa-exclamation-triangle me-1"></i>{{ low_credit_keys|length }} alerts
                             </div>
                         {% endif %}
                     </div>
@@ -151,68 +138,330 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between">
-                <h5>Quick Actions</h5>
-            </div>
-            <div class="card-body">
-                <a href="{{ url_for('admin_api_keys') }}" class="btn btn-primary mb-2 w-100">
-                    <i class="fas fa-key"></i> Manage API Keys
-                </a>
-                <a href="{{ url_for('admin_users') }}" class="btn btn-success mb-2 w-100">
-                    <i class="fas fa-users"></i> Manage Users
-                </a>
-                <a href="{{ url_for('admin_pricing') }}" class="btn btn-warning mb-2 w-100">
-                    <i class="fas fa-tags"></i> Manage Pricing
-                </a>
-                <a href="{{ url_for('admin_payments') }}" class="btn btn-info mb-2 w-100">
-                    <i class="fas fa-credit-card"></i> Payment Approvals
-                </a>
-                <a href="{{ url_for('admin_payment_methods') }}" class="btn btn-dark mb-2 w-100">
-                    <i class="fas fa-cogs"></i> Payment Methods
-                </a>
-                <a href="{{ url_for('admin_api_credits') }}" class="btn btn-outline-danger mb-2 w-100">
-                    <i class="fas fa-chart-pie"></i> API Credits Monitor
-                </a>
-                <a href="{{ url_for('admin_scheduler') }}" class="btn btn-outline-success mb-2 w-100">
-                    <i class="fas fa-clock"></i> Auto Refresh Scheduler
-                </a>
-                <a href="{{ url_for('admin_smtp_settings') }}" class="btn btn-outline-primary mb-2 w-100">
-                    <i class="fas fa-envelope"></i> SMTP Settings
-                </a>
-                <a href="{{ url_for('admin_system_settings') }}" class="btn btn-outline-secondary mb-2 w-100">
-                    <i class="fas fa-cog"></i> System Settings
-                </a>
-                <a href="{{ url_for('admin_contact_forms') }}" class="btn btn-outline-primary mb-2 w-100">
-                    <i class="fas fa-inbox"></i> Contact Forms
-                </a>
-                <form method="POST" action="{{ url_for('sync_api_credits') }}" class="d-inline w-100">
-                    <button type="submit" class="btn btn-outline-info mb-2 w-100">
-                        <i class="fas fa-sync-alt"></i> Sync Live Credits
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5>API Key Status</h5>
-            </div>
-            <div class="card-body">
-                {% for key in api_keys %}
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>{{ key.key_name }}</span>
-                    <span class="badge bg-{{ 'success' if key.status.value == 'active' else 'danger' }}">
-                        {{ key.status.value.title() }}
-                    </span>
+<!-- Economics Overview -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-gradient bg-primary text-white border-0">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    <h5 class="mb-0 fw-semibold">Platform Economics Overview</h5>
                 </div>
-                {% endfor %}
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <div class="h-100">
+                            <h6 class="fw-bold text-primary mb-3">
+                                <i class="fas fa-cogs me-2"></i>Cost Structure
+                            </h6>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item border-0 px-0 py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Per domain search:</span>
+                                        <span class="fw-semibold">1 API credit</span>
+                                    </div>
+                                </div>
+                                <div class="list-group-item border-0 px-0 py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Client pricing:</span>
+                                        <span class="fw-semibold">1 coin = 1 search</span>
+                                    </div>
+                                </div>
+                                <div class="list-group-item border-0 px-0 py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Conversion ratio:</span>
+                                        <span class="fw-semibold text-success">1:1</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="h-100">
+                            <h6 class="fw-bold text-success mb-3">
+                                <i class="fas fa-battery-three-quarters me-2"></i>Current Capacity
+                            </h6>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item border-0 px-0 py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Available credits:</span>
+                                        <span class="fw-semibold">{{ "{:,}".format(total_remaining) }}</span>
+                                    </div>
+                                </div>
+                                <div class="list-group-item border-0 px-0 py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Possible searches:</span>
+                                        <span class="fw-semibold">{{ "{:,}".format(total_remaining|int) }}</span>
+                                    </div>
+                                </div>
+                                <div class="list-group-item border-0 px-0 py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">100-coin packages:</span>
+                                        <span class="fw-semibold text-info">{{ (total_remaining / 100)|int }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="h-100">
+                            <h6 class="fw-bold text-warning mb-3">
+                                <i class="fas fa-lightbulb me-2"></i>Health Status
+                            </h6>
+                            {% if total_remaining < 1500 %}
+                                <div class="alert alert-danger border-0 mb-0">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Critical</div>
+                                            <small>Add API keys immediately</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif total_remaining < 5000 %}
+                                <div class="alert alert-warning border-0 mb-0">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Warning</div>
+                                            <small>Consider backup API keys</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-success border-0 mb-0">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">Healthy</div>
+                                            <small>API capacity optimal</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Management Sections -->
+<div class="row g-4">
+    <!-- Primary Management -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light border-0">
+                <h5 class="mb-0 fw-semibold text-dark">
+                    <i class="fas fa-tools me-2 text-primary"></i>Primary Management
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <a href="{{ url_for('admin_api_keys') }}" class="btn btn-outline-primary w-100 py-3 border-2">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-key fa-lg mb-2"></i>
+                                <span class="fw-semibold">API Keys</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-success w-100 py-3 border-2">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-users fa-lg mb-2"></i>
+                                <span class="fw-semibold">Users</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('admin_pricing') }}" class="btn btn-outline-warning w-100 py-3 border-2">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-tags fa-lg mb-2"></i>
+                                <span class="fw-semibold">Pricing</span>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('admin_payments') }}" class="btn btn-outline-info w-100 py-3 border-2">
+                            <div class="d-flex flex-column align-items-center">
+                                <i class="fas fa-credit-card fa-lg mb-2"></i>
+                                <span class="fw-semibold">Payments</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Configuration -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light border-0">
+                <h5 class="mb-0 fw-semibold text-dark">
+                    <i class="fas fa-cog me-2 text-secondary"></i>System Configuration
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin_system_settings') }}" class="btn btn-outline-dark d-flex align-items-center">
+                        <i class="fas fa-cog me-3"></i>
+                        <div class="text-start flex-grow-1">
+                            <div class="fw-semibold">System Settings</div>
+                            <small class="text-muted">URL limits & configurations</small>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('admin_payment_methods') }}" class="btn btn-outline-dark d-flex align-items-center">
+                        <i class="fas fa-credit-card me-3"></i>
+                        <div class="text-start flex-grow-1">
+                            <div class="fw-semibold">Payment Methods</div>
+                            <small class="text-muted">Stripe, PayPal configuration</small>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('admin_smtp_settings') }}" class="btn btn-outline-dark d-flex align-items-center">
+                        <i class="fas fa-envelope me-3"></i>
+                        <div class="text-start flex-grow-1">
+                            <div class="fw-semibold">SMTP Settings</div>
+                            <small class="text-muted">Email configuration</small>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('admin_contact_forms') }}" class="btn btn-outline-dark d-flex align-items-center">
+                        <i class="fas fa-inbox me-3"></i>
+                        <div class="text-start flex-grow-1">
+                            <div class="fw-semibold">Contact Forms</div>
+                            <small class="text-muted">Customer inquiries</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monitoring & Analytics -->
+<div class="row g-4 mt-2">
+    <!-- API Monitoring -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light border-0">
+                <h5 class="mb-0 fw-semibold text-dark">
+                    <i class="fas fa-chart-line me-2 text-danger"></i>API Monitoring
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin_api_credits') }}" class="btn btn-outline-danger d-flex align-items-center">
+                        <i class="fas fa-chart-pie me-3"></i>
+                        <div class="text-start flex-grow-1">
+                            <div class="fw-semibold">API Credits Monitor</div>
+                            <small class="text-muted">Detailed usage analytics</small>
+                        </div>
+                        <span class="badge bg-danger">{{ low_credit_keys|length }}</span>
+                    </a>
+                    <a href="{{ url_for('admin_scheduler') }}" class="btn btn-outline-success d-flex align-items-center">
+                        <i class="fas fa-clock me-3"></i>
+                        <div class="text-start flex-grow-1">
+                            <div class="fw-semibold">Auto Refresh Scheduler</div>
+                            <small class="text-muted">Automated credit monitoring</small>
+                        </div>
+                    </a>
+                    <form method="POST" action="{{ url_for('sync_api_credits') }}" class="mb-0">
+                        <button type="submit" class="btn btn-outline-info w-100 d-flex align-items-center">
+                            <i class="fas fa-sync-alt me-3"></i>
+                            <div class="text-start flex-grow-1">
+                                <div class="fw-semibold">Sync Live Credits</div>
+                                <small class="text-muted">Refresh from Serper API</small>
+                            </div>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Status -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-semibold text-dark">
+                    <i class="fas fa-key me-2 text-info"></i>API Key Status
+                </h5>
+                <span class="badge bg-secondary">{{ api_keys|length }} total</span>
+            </div>
+            <div class="card-body p-4">
+                {% if api_keys %}
+                    <div class="row g-2">
+                        {% for key in api_keys[:8] %}
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-2 rounded border {% if key.status.value == 'active' %}border-success bg-success bg-opacity-10{% else %}border-danger bg-danger bg-opacity-10{% endif %}">
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold small">{{ key.key_name }}</div>
+                                    <div class="text-muted small">
+                                        {% if key.status.value == 'active' %}
+                                            Credits: {{ key.total_credits - key.credits_used }}
+                                        {% else %}
+                                            Inactive
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <span class="badge bg-{{ 'success' if key.status.value == 'active' else 'danger' }}">
+                                    <i class="fas fa-{{ 'check' if key.status.value == 'active' else 'times' }} me-1"></i>
+                                    {{ key.status.value.title() }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if api_keys|length > 8 %}
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('admin_api_keys') }}" class="btn btn-sm btn-outline-primary">
+                                View all {{ api_keys|length }} API keys <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-key fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No API Keys Added</h6>
+                        <a href="{{ url_for('admin_api_keys') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Add Your First API Key
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Add some professional interactions
+document.addEventListener('DOMContentLoaded', function() {
+    // Add hover effects to metric cards
+    const metricCards = document.querySelectorAll('.card');
+    metricCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'transform 0.2s ease-in-out';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Auto-refresh status every 5 minutes
+    setInterval(function() {
+        if (document.querySelector('.badge:contains("Live Data")')) {
+            location.reload();
+        }
+    }, 300000); // 5 minutes
+});
+</script>
 {% endblock %}
