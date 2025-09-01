@@ -2530,21 +2530,13 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         writer.writeheader()
         
         for business in businesses:
-            # Transform old business data format to new web search format
-            # The to_dict() method returns 'Business Name', 'Website' etc.
-            url = business.get('Website', business.get('URL', ''))
-            
-            # Extract domain from URL if not already present
-            domain = business.get('Domain', '')
-            if not domain and url:
-                domain = url.replace('https://', '').replace('http://', '').split('/')[0]
-            
+            # Extract the CSV-specific fields from the business data
             transformed_business = {
-                'Title': business.get('Business Name', business.get('Title', '')),
-                'URL': url,
-                'Description': business.get('Address', ''),  # Web search descriptions are saved in Address field
-                'Domain': domain,
-                'Rank': business.get('Rank', ''),
+                'Title': business.get('Business Name', ''),
+                'URL': business.get('Website', ''),
+                'Description': business.get('Address', ''),  # Web descriptions stored in address field
+                'Domain': business.get('Website', '').replace('https://', '').replace('http://', '').split('/')[0] if business.get('Website') else '',
+                'Rank': '',  # Not available in current data
                 'Keywords Found': business.get('Keywords Found', ''),
                 'Search Date': business.get('Search Date', '')
             }

@@ -397,8 +397,15 @@ class BusinessData(db.Model):
         self.photos = json.dumps(photos_list)
     
     def to_dict(self):
-        """Convert business data to dictionary for CSV export"""
+        """Convert business data to dictionary for web display and CSV export"""
         return {
+            # Template display fields (lowercase for web template)
+            'title': self.name or '',                    # For web template display
+            'url': self.website or '',                   # For web template display  
+            'snippet': self.address or '',               # For web template display
+            'rank': '',                                  # For web template display
+            
+            # CSV and legacy fields (proper case)
             'Business Name': self.name,
             'Address': self.address,
             'City': self.city,
@@ -412,6 +419,6 @@ class BusinessData(db.Model):
             'Business Types': ', '.join(self.get_types_list()),
             'Latitude': self.latitude,
             'Longitude': self.longitude,
-            'Keywords Found': self.keywords_searched,
+            'Keywords Found': self.keywords_searched or '',
             'Search Date': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else ''
         }
