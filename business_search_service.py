@@ -93,13 +93,8 @@ class BusinessSearchService:
                 }
                 
                 # Handle keyword processing BEFORE city processing
-                # Support both space-separated and newline-separated keywords
-                keywords_input = session.keywords.replace(',', ' ')  # Treat commas as spaces
-                # Split by both spaces and newlines, then clean up
-                keywords_parts = []
-                for line in keywords_input.split('\n'):
-                    keywords_parts.extend(line.split())
-                keywords_list = [kw.strip() for kw in keywords_parts if kw.strip() and len(kw.strip()) > 1]
+                # Each line is a complete keyword phrase (not individual words)
+                keywords_list = [line.strip() for line in session.keywords.split('\n') if line.strip()]
                 
                 logger.info(f"Found {len(keywords_list)} keywords to process: {keywords_list}")
                 
