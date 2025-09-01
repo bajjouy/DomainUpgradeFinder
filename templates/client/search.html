@@ -20,6 +20,7 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">
                         <label for="keywords" class="form-label">Keywords (one set per line)</label>
                         <textarea class="form-control" id="keywords" name="keywords" rows="8" 
