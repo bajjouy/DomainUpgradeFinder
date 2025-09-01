@@ -5,15 +5,20 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2><i class="fas fa-search"></i> Bulk Search Results</h2>
+        <h2><i class="fas fa-search"></i> {% if results.is_bulk_search %}Bulk Search Results{% else %}Search Results{% endif %}</h2>
         <p class="text-muted">
-            Found <strong>{{ results.total_businesses }}</strong> URLs for bulk search of multiple keywords
+            {% if results.is_bulk_search %}
+                Found <strong>{{ results.total_businesses }}</strong> URLs across <strong>{{ results.keyword_results|length }}</strong> separate keyword searches
+            {% else %}
+                Found <strong>{{ results.total_businesses }}</strong> URLs for "{{ results.session.keywords }}"
+            {% endif %}
         </p>
         <hr>
     </div>
 </div>
 
 <!-- Keyword Summary Table -->
+{% if results.is_bulk_search %}
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
@@ -28,23 +33,23 @@
                                 <th>Keyword</th>
                                 <th class="text-center">URLs Found</th>
                                 <th class="text-center">Percentage</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% set keyword_counts = {} %}
-                            {% for business in results.businesses %}
-                                {% set keyword = business.keywords_searched %}
-                                {% if keyword_counts.update({keyword: keyword_counts.get(keyword, 0) + 1}) %}{% endif %}
-                            {% endfor %}
-                            
-                            {% for keyword, count in keyword_counts.items() %}
+                            {% for keyword_result in results.keyword_results %}
                             <tr>
-                                <td><strong>{{ keyword }}</strong></td>
+                                <td><strong>{{ keyword_result.keyword }}</strong></td>
                                 <td class="text-center">
-                                    <span class="badge bg-primary">{{ count }}</span>
+                                    <span class="badge bg-primary">{{ keyword_result.url_count }}</span>
                                 </td>
                                 <td class="text-center">
-                                    {{ "%.1f"|format((count / results.total_businesses * 100) if results.total_businesses > 0 else 0) }}%
+                                    {{ "%.1f"|format((keyword_result.url_count / results.total_businesses * 100) if results.total_businesses > 0 else 0) }}%
+                                </td>
+                                <td class="text-center">
+                                    <a href="{{ url_for('download_keyword_csv', session_id=keyword_result.session_id) }}" class="btn btn-sm btn-success">
+                                        <i class="fas fa-download"></i> CSV
+                                    </a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -54,6 +59,11 @@
                                 <th>Total</th>
                                 <th class="text-center">{{ results.total_businesses }} URLs</th>
                                 <th class="text-center">100%</th>
+                                <th class="text-center">
+                                    <a href="{{ url_for('download_business_csv', session_id=results.session.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-download"></i> All CSV
+                                    </a>
+                                </th>
                             </tr>
                         </tfoot>
                     </table>
@@ -62,6 +72,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- Summary Stats -->
 <div class="row mb-4">
@@ -76,7 +87,7 @@
     <div class="col-md-4">
         <div class="card bg-info text-white">
             <div class="card-body text-center">
-                <h4>{{ keyword_counts|length if keyword_counts else 0 }}</h4>
+                <h4>{% if results.is_bulk_search %}{{ results.keyword_results|length }}{% else %}1{% endif %}</h4>
                 <small>Keywords Searched</small>
             </div>
         </div>

@@ -108,27 +108,91 @@ class BusinessSearchService:
                         
                         db.session.commit()
                         
-                        # Handle bulk search - split keywords by newlines
+                        # Handle bulk search - create separate sessions for each keyword
                         keywords_list = [kw.strip() for kw in session.keywords.split('\n') if kw.strip()]
-                        all_businesses = []
                         
-                        for keyword in keywords_list:
-                            logger.info(f"🔍 Searching for keyword: '{keyword}'")
+                        if len(keywords_list) > 1:
+                            # Multiple keywords - create separate sessions for each
+                            child_sessions = []
+                            for keyword in keywords_list:
+                                logger.info(f"🔍 Creating separate session for keyword: '{keyword}'")
+                                
+                                # Create child session for this keyword
+                                child_session = BusinessSearchSession()
+                                child_session.user_id = session.user_id
+                                child_session.keywords = keyword  # Single keyword
+                                child_session.cities = session.cities
+                                child_session.max_results_per_city = session.max_results_per_city
+                                child_session.status = 'processing'
+                                child_session.progress = 0.0
+                                child_session.parent_session_id = session.id  # Link to parent
+                                child_session.created_at = session.created_at
+                                db.session.add(child_session)
+                                db.session.flush()
+                                child_sessions.append(child_session)
+                                
+                                # Search for this keyword
+                                search_location = None if city.lower() == "global" else city
+                                businesses = self._search_businesses_paginated(
+                                    keyword, search_location or "global", session.max_results_per_city, child_session.id
+                                )
+                                
+                                # Save businesses for this child session
+                                for business_data in businesses:
+                                    business = BusinessData()
+                                    business.session_id = child_session.id
+                                    business.user_id = session.user_id
+                                    business.keywords_searched = keyword
+                                    business.city = city
+                                    
+                                    # Focus on URLs and titles (simplified data)
+                                    business.name = business_data.get('name', '')
+                                    business.website = business_data.get('website', '')
+                                    business.address = business_data.get('description', '')
+                                    business.phone = business_data.get('phone', '')
+                                    business.rating = business_data.get('rating')
+                                    business.user_ratings_total = business_data.get('user_ratings_total')
+                                    business.price_level = business_data.get('price_level')
+                                    business.business_status = 'UNKNOWN'
+                                    business.latitude = None
+                                    business.longitude = None
+                                    business.place_id = None
+                                    business.email = None
+                                    business.types = json.dumps([])
+                                    business.opening_hours = json.dumps([])
+                                    
+                                    db.session.add(business)
+                                
+                                # Mark child session as completed
+                                child_session.status = 'completed'
+                                child_session.progress = 100.0
+                                child_session.completed_at = datetime.utcnow()
+                                child_session.processing_time = (child_session.completed_at - child_session.created_at).total_seconds()
+                                
+                                logger.info(f"✅ Completed separate session for '{keyword}': {len(businesses)} results")
                             
-                            # Handle simple Google search (no location if city is "global")
+                            db.session.commit()
+                            
+                            # Mark parent session as completed
+                            session.status = 'completed'
+                            session.progress = 100.0
+                            session.completed_at = datetime.utcnow()
+                            session.processing_time = (session.completed_at - session.created_at).total_seconds()
+                            
+                            logger.info(f"✅ Completed bulk search with {len(child_sessions)} separate keyword sessions")
+                            return  # Exit early - we handled everything
+                        
+                        else:
+                            # Single keyword - process normally
+                            keyword = keywords_list[0] if keywords_list else session.keywords
                             search_location = None if city.lower() == "global" else city
                             businesses = self._search_businesses_paginated(
-                                keyword, search_location, session.max_results_per_city, session_id
+                                keyword, search_location or "global", session.max_results_per_city, session_id
                             )
                             
-                            # Tag each business with the specific keyword used
+                            # Tag each business with the keyword
                             for business in businesses:
                                 business['search_keyword'] = keyword
-                            
-                            all_businesses.extend(businesses)
-                            logger.info(f"✅ Found {len(businesses)} results for '{keyword}'")
-                        
-                        businesses = all_businesses
                         
                         # Save businesses page by page with real-time updates
                         saved_count = 0
@@ -433,35 +497,80 @@ class BusinessSearchService:
             logger.error(f"Session {session_id} not found for user {user_id}")
             return {'error': 'Session not found or access denied'}
         
-        # Get all businesses found in this session
-        businesses = BusinessData.query.filter_by(session_id=session_id).all()
-        logger.info(f"Found {len(businesses)} businesses in database for session {session_id}")
+        # Check if this is a bulk search with child sessions
+        child_sessions = BusinessSearchSession.query.filter_by(parent_session_id=session_id).all()
         
-        # Group businesses by city
-        businesses_by_city = {}
-        for business in businesses:
-            city = business.city
-            if city not in businesses_by_city:
-                businesses_by_city[city] = []
-            businesses_by_city[city].append(business.to_dict())
+        if child_sessions:
+            # This is a bulk search with separate keyword sessions
+            keyword_results = []
+            total_businesses = 0
             
-        logger.info(f"Businesses grouped by city: {list(businesses_by_city.keys())}")
-        logger.info(f"Total businesses by city: {sum(len(city_businesses) for city_businesses in businesses_by_city.values())}")
+            for child_session in child_sessions:
+                # Get businesses for this child session
+                businesses = BusinessData.query.filter_by(session_id=child_session.id).all()
+                business_dicts = [business.to_dict() for business in businesses]
+                
+                keyword_results.append({
+                    'session_id': child_session.id,
+                    'keyword': child_session.keywords,
+                    'url_count': len(businesses),
+                    'businesses': business_dicts,
+                    'processing_time': child_session.processing_time,
+                    'status': child_session.status
+                })
+                
+                total_businesses += len(businesses)
+            
+            logger.info(f"Found {len(child_sessions)} separate keyword sessions for parent session {session_id}")
+            logger.info(f"Total URLs across all keywords: {total_businesses}")
+            
+            return {
+                'session': {
+                    'id': session.id,
+                    'keywords': session.keywords,
+                    'cities': session.get_cities_list(),
+                    'status': session.status,
+                    'total_businesses_found': session.total_businesses_found,
+                    'processing_time': session.processing_time,
+                    'created_at': session.created_at.isoformat() if session.created_at else None,
+                    'completed_at': session.completed_at.isoformat() if session.completed_at else None
+                },
+                'is_bulk_search': True,
+                'keyword_results': keyword_results,
+                'total_businesses': total_businesses
+            }
         
-        return {
-            'session': {
-                'id': session.id,
-                'keywords': session.keywords,
-                'cities': session.get_cities_list(),
-                'status': session.status,
-                'total_businesses_found': session.total_businesses_found,
-                'processing_time': session.processing_time,
-                'created_at': session.created_at.isoformat() if session.created_at else None,
-                'completed_at': session.completed_at.isoformat() if session.completed_at else None
-            },
-            'businesses_by_city': businesses_by_city,
-            'total_businesses': len(businesses)
-        }
+        else:
+            # Single keyword search - original behavior
+            businesses = BusinessData.query.filter_by(session_id=session_id).all()
+            logger.info(f"Found {len(businesses)} businesses in database for session {session_id}")
+            
+            # Group businesses by city
+            businesses_by_city = {}
+            for business in businesses:
+                city = business.city
+                if city not in businesses_by_city:
+                    businesses_by_city[city] = []
+                businesses_by_city[city].append(business.to_dict())
+                
+            logger.info(f"Businesses grouped by city: {list(businesses_by_city.keys())}")
+            logger.info(f"Total businesses by city: {sum(len(city_businesses) for city_businesses in businesses_by_city.values())}")
+            
+            return {
+                'session': {
+                    'id': session.id,
+                    'keywords': session.keywords,
+                    'cities': session.get_cities_list(),
+                    'status': session.status,
+                    'total_businesses_found': session.total_businesses_found,
+                    'processing_time': session.processing_time,
+                    'created_at': session.created_at.isoformat() if session.created_at else None,
+                    'completed_at': session.completed_at.isoformat() if session.completed_at else None
+                },
+                'is_bulk_search': False,
+                'businesses_by_city': businesses_by_city,
+                'total_businesses': len(businesses)
+            }
 
 # Global service instance
 business_search_service = BusinessSearchService()

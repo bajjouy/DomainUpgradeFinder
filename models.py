@@ -309,12 +309,14 @@ class BusinessSearchSession(db.Model):
     current_location = db.Column(db.String(200))  # Currently processing city
     processing_time = db.Column(db.Float)  # Total processing time in seconds
     max_results_per_city = db.Column(db.Integer, default=20)  # Business result limit per city
+    parent_session_id = db.Column(db.Integer, db.ForeignKey('business_search_sessions.id'), nullable=True)  # For bulk searches
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     
     # Relationships
     user = db.relationship('User', backref='business_search_sessions')
     businesses = db.relationship('BusinessData', backref='search_session', cascade='all, delete-orphan')
+    child_sessions = db.relationship('BusinessSearchSession', backref=db.backref('parent_session', remote_side='BusinessSearchSession.id'), lazy='dynamic')
     
     def __repr__(self):
         return f'<BusinessSearchSession {self.user_id}: {self.keywords}>'

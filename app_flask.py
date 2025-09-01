@@ -2422,30 +2422,41 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
             flash(results['error'], 'error')
             return redirect(url_for('business_search'))
         
-        # Check if filtering by city
-        city_filter = request.args.get('city')
-        
-        # Prepare CSV data
-        output = io.StringIO()
-        
-        # Clean keywords for filename (remove newlines and special characters)
-        clean_keywords = results['session']['keywords'].replace('\n', '_').replace('\r', '').replace(' ', '_')
-        clean_keywords = ''.join(c for c in clean_keywords if c.isalnum() or c in '_-')[:50]  # Limit length
-        
-        if city_filter:
-            # Single city CSV
-            businesses = results['businesses_by_city'].get(city_filter, [])
-            filename = f"businesses_{clean_keywords}_{city_filter}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        else:
-            # All businesses CSV
+        # Handle bulk search vs single search
+        if results.get('is_bulk_search'):
+            # Bulk search - combine all keyword results
             businesses = []
-            for city_businesses in results['businesses_by_city'].values():
-                businesses.extend(city_businesses)
-            filename = f"bulk_search_{clean_keywords}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            for keyword_result in results['keyword_results']:
+                businesses.extend(keyword_result['businesses'])
+            
+            # Clean keywords for filename
+            clean_keywords = 'bulk_search'
+            filename = f"bulk_search_all_keywords_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        else:
+            # Single search - original behavior
+            city_filter = request.args.get('city')
+            
+            # Clean keywords for filename (remove newlines and special characters)
+            clean_keywords = results['session']['keywords'].replace('\n', '_').replace('\r', '').replace(' ', '_')
+            clean_keywords = ''.join(c for c in clean_keywords if c.isalnum() or c in '_-')[:50]  # Limit length
+            
+            if city_filter:
+                # Single city CSV
+                businesses = results['businesses_by_city'].get(city_filter, [])
+                filename = f"businesses_{clean_keywords}_{city_filter}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            else:
+                # All businesses CSV
+                businesses = []
+                for city_businesses in results['businesses_by_city'].values():
+                    businesses.extend(city_businesses)
+                filename = f"search_{clean_keywords}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         
         if not businesses:
             flash('No businesses found to export', 'warning')
             return redirect(url_for('business_search_results', session_id=session_id))
+        
+        # Prepare CSV data
+        output = io.StringIO()
         
         # Write CSV
         fieldnames = [
@@ -2459,6 +2470,66 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         
         for business in businesses:
             writer.writerow(business)
+        
+        # Prepare response
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+
+    @app.route('/download-keyword-csv/<int:session_id>')
+    @client_required
+    def download_keyword_csv(session_id):
+        """Download CSV for a specific keyword search session"""
+        from business_search_service import business_search_service
+        from models import BusinessData, BusinessSearchSession
+        import csv
+        import io
+        
+        # Get the child session (keyword-specific session)
+        session = BusinessSearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id
+        ).first()
+        
+        if not session:
+            flash('Session not found', 'error')
+            return redirect(url_for('business_search'))
+        
+        # Get businesses for this specific keyword session
+        businesses = BusinessData.query.filter_by(session_id=session_id).all()
+        
+        if not businesses:
+            flash('No results found for this keyword', 'warning')
+            return redirect(url_for('business_search_results', session_id=session.parent_session_id or session_id))
+        
+        # Prepare CSV data
+        output = io.StringIO()
+        
+        # Clean keyword for filename
+        clean_keyword = session.keywords.replace(' ', '_').replace('\n', '_')
+        clean_keyword = ''.join(c for c in clean_keyword if c.isalnum() or c in '_-')[:30]
+        filename = f"keyword_{clean_keyword}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        # Write CSV
+        fieldnames = [
+            'Business Name', 'Website URL', 'Description', 'Phone', 'Rating',
+            'Keywords Found', 'Search Date'
+        ]
+        
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for business in businesses:
+            writer.writerow({
+                'Business Name': business.name,
+                'Website URL': business.website,
+                'Description': business.address,  # We use address field for description/snippet
+                'Phone': business.phone or '',
+                'Rating': business.rating or '',
+                'Keywords Found': business.keywords_searched,
+                'Search Date': business.created_at.strftime('%Y-%m-%d %H:%M:%S') if business.created_at else ''
+            })
         
         # Prepare response
         response = make_response(output.getvalue())
