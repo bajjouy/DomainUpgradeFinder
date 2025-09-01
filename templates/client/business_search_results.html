@@ -291,10 +291,13 @@ function downloadCityCSVs() {
 
 // Initialize Bootstrap tabs
 document.addEventListener('DOMContentLoaded', function() {
-    const triggerTabList = [].slice.call(document.querySelectorAll('#cityTabs button'));
-    triggerTabList.forEach(function (triggerEl) {
-        const tabTrigger = new bootstrap.Tab(triggerEl);
-    });
+    const cityTabs = document.querySelector('#cityTabs');
+    if (cityTabs) {
+        const triggerTabList = [].slice.call(document.querySelectorAll('#cityTabs button'));
+        triggerTabList.forEach(function (triggerEl) {
+            const tabTrigger = new bootstrap.Tab(triggerEl);
+        });
+    }
 });
 </script>
 {% endblock %}
