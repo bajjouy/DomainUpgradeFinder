@@ -310,7 +310,10 @@ class BusinessSearchService:
         from api_keys import get_working_serper_key
         
         all_results = []
-        results_per_page = min(100, max_results)  # Serper max is 100 per request
+        max_per_request = 100  # Serper API limit per request
+        
+        # For large result counts, we'll need multiple requests
+        total_pages = (max_results + max_per_request - 1) // max_per_request  # Ceiling division
         
         logger.info(f"🔍 Starting exact keyword search for '{keyword}' (target: {max_results} URLs)")
         
@@ -321,30 +324,59 @@ class BusinessSearchService:
                 logger.error("❌ No working Serper API key found")
                 return []
             
-            # Do web search for exact keyword (no location)
-            logger.info(f"📄 Searching for exact keyword '{keyword}' (up to {results_per_page} results)...")
-            search_results = search_google_web_serper(
-                api_key=api_key,
-                query=keyword,  # Exact keyword search
-                location=None,  # No location - pure keyword search
-                num_results=results_per_page
-            )
+            # Search multiple pages if needed for large result counts
+            for page in range(1, total_pages + 1):
+                results_needed = min(max_per_request, max_results - len(all_results))
+                start_index = (page - 1) * max_per_request
+                
+                logger.info(f"📄 Page {page}/{total_pages}: Searching for '{keyword}' (results {start_index+1}-{start_index+results_needed})...")
+                
+                # Update session status for pagination
+                if session_id in self.active_sessions:
+                    self.active_sessions[session_id].update({
+                        'current_location': f"'{keyword}' - Page {page}/{total_pages} (searching...)",
+                        'total_businesses': len(all_results)
+                    })
+                
+                search_results = search_google_web_serper(
+                    api_key=api_key,
+                    query=keyword,  # Exact keyword search
+                    location=None,  # No location - pure keyword search
+                    num_results=results_needed,
+                    start=start_index  # Pagination offset
+                )
+                
+                if search_results.get('error'):
+                    logger.error(f"❌ Search error on page {page}: {search_results['error']}")
+                    break
+                
+                page_businesses = search_results.get('businesses', [])
+                all_results.extend(page_businesses)
+                
+                logger.info(f"✅ Page {page}: Found {len(page_businesses)} URLs (Total: {len(all_results)}/{max_results})")
+                
+                # Update session status after page
+                if session_id in self.active_sessions:
+                    self.active_sessions[session_id].update({
+                        'current_location': f"'{keyword}' - Page {page}/{total_pages}: {len(page_businesses)} URLs found",
+                        'total_businesses': len(all_results)
+                    })
+                
+                # Stop if we got fewer results than requested (end of results)
+                if len(page_businesses) < results_needed:
+                    logger.info(f"🏁 Reached end of results for '{keyword}' (got {len(page_businesses)}, expected {results_needed})")
+                    break
+                
+                # Stop if we've reached our target
+                if len(all_results) >= max_results:
+                    break
+                    
+                # Rate limiting between pages
+                import time
+                time.sleep(0.5)
             
-            if search_results.get('error'):
-                logger.error(f"❌ Search error: {search_results['error']}")
-                return []
-            
-            businesses = search_results.get('businesses', [])
-            logger.info(f"✅ Found {len(businesses)} URLs for keyword '{keyword}'")
-            
-            # Update session status
-            if session_id in self.active_sessions:
-                self.active_sessions[session_id].update({
-                    'current_location': f"Processing {len(businesses)} URLs for '{keyword}'",
-                    'total_businesses': len(businesses)
-                })
-            
-            return businesses
+            logger.info(f"✅ Completed search for '{keyword}': {len(all_results)} total URLs found")
+            return all_results
             
         except Exception as e:
             logger.error(f"❌ Error searching for keyword '{keyword}': {str(e)}")

@@ -112,7 +112,7 @@ def bulk_check_all_keys(api_keys: list) -> Dict:
         'live_data_available': len([k for k in key_details if k.get('is_live', False)]) > 0
     }
 
-def search_google_web_serper(api_key: str, query: str, location: str = None, num_results: int = 20) -> Dict:
+def search_google_web_serper(api_key: str, query: str, location: str = None, num_results: int = 20, start: int = 0) -> Dict:
     """
     Search Google web results and extract business data from the results
     
@@ -121,6 +121,7 @@ def search_google_web_serper(api_key: str, query: str, location: str = None, num
         query: Business search query (e.g., "restaurants", "coffee shops")
         location: Location to search in (e.g., "New York, NY", "Los Angeles, CA") 
         num_results: Number of results to return (default 20, max 100)
+        start: Starting index for pagination (default 0)
     
     Returns:
         Dict with 'businesses', 'error', 'credits_used' keys
@@ -141,6 +142,10 @@ def search_google_web_serper(api_key: str, query: str, location: str = None, num
             'gl': 'us',  # Country code
             'hl': 'en'   # Language
         }
+        
+        # Add pagination start parameter if provided
+        if start > 0:
+            payload['start'] = start
         
         response = requests.post(url, headers=headers, json=payload, timeout=30)
         
