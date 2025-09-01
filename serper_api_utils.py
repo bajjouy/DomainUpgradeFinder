@@ -132,8 +132,8 @@ def search_google_web_serper(api_key: str, query: str, location: str = None, num
             'Content-Type': 'application/json'
         }
         
-        # Construct search query - combine query with location
-        search_query = f"{query} in {location}" if location else query
+        # For exact keyword matching - use quotes to search for exact phrases
+        search_query = f'"{query}"' if ' ' in query else query
         
         payload = {
             'q': search_query,
@@ -152,9 +152,10 @@ def search_google_web_serper(api_key: str, query: str, location: str = None, num
             organic_results = data.get('organic', [])
             
             for result in organic_results:
-                business = _extract_business_from_search_result(result, location or '')
-                if business:
-                    businesses.append(business)
+                # For exact keyword searches - use simplified web result extraction
+                web_result = _extract_web_result_from_search(result)
+                if web_result:
+                    businesses.append(web_result)
             
             # Also check knowledge graph for business info
             knowledge_graph = data.get('knowledgeGraph', {})
@@ -303,6 +304,41 @@ def search_places_serper(api_key: str, query: str, location: str = None, num_res
             'credits_used': 0,
             'error': f"Unexpected error: {str(e)}"
         }
+
+def _extract_web_result_from_search(result: Dict) -> Optional[Dict]:
+    """
+    Extract URL and title from a Google web search result - simplified for exact keyword matching
+    """
+    title = result.get('title', '')
+    snippet = result.get('snippet', '')
+    link = result.get('link', '')
+    
+    # Skip common non-useful sites for domain research
+    non_useful_sites = ['google.com', 'youtube.com', 'facebook.com', 'twitter.com', 'linkedin.com']
+    
+    # Only filter out obvious non-useful sites
+    is_non_useful = any(site in link.lower() for site in non_useful_sites)
+    
+    if is_non_useful or not link or not title:
+        return None
+    
+    return {
+        'name': title.strip(),  # Page title
+        'website': link,        # URL
+        'description': snippet.strip(),  # Page snippet/description
+        'phone': '',           # Not needed for URL/title focus
+        'rating': None,        # Not needed for URL/title focus
+        'address': '',         # Not needed for URL/title focus
+        'user_ratings_total': None,
+        'price_level': None,
+        'business_status': 'UNKNOWN',
+        'types': [],
+        'latitude': None,
+        'longitude': None,
+        'place_id': '',
+        'opening_hours': [],
+        'source': 'google_web_search'
+    }
 
 def _extract_business_from_search_result(result: Dict, location: str) -> Optional[Dict]:
     """

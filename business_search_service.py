@@ -131,10 +131,9 @@ class BusinessSearchService:
                                 db.session.flush()
                                 child_sessions.append(child_session)
                                 
-                                # Search for this keyword
-                                search_location = None if city.lower() == "global" else city
-                                businesses = self._search_businesses_paginated(
-                                    keyword, search_location or "global", session.max_results_per_city, child_session.id
+                                # Search for this exact keyword using web search (no location)
+                                businesses = self._search_web_results_paginated(
+                                    keyword, session.max_results_per_city, child_session.id
                                 )
                                 
                                 # Save businesses for this child session
@@ -183,11 +182,10 @@ class BusinessSearchService:
                             return  # Exit early - we handled everything
                         
                         else:
-                            # Single keyword - process normally
+                            # Single keyword - do exact web search (not location-based)
                             keyword = keywords_list[0] if keywords_list else session.keywords
-                            search_location = None if city.lower() == "global" else city
-                            businesses = self._search_businesses_paginated(
-                                keyword, search_location or "global", session.max_results_per_city, session_id
+                            businesses = self._search_web_results_paginated(
+                                keyword, session.max_results_per_city, session_id
                             )
                             
                             # Tag each business with the keyword
@@ -303,6 +301,54 @@ class BusinessSearchService:
                     self.active_sessions[session_id]['status'] = 'failed'
             except:
                 pass
+    
+    def _search_web_results_paginated(self, keyword: str, max_results: int, session_id: int) -> List[Dict]:
+        """
+        Search for exact keyword matches using Google web search - returns URLs and titles
+        """
+        from serper_api_utils import search_google_web_serper
+        from api_keys import get_working_serper_key
+        
+        all_results = []
+        results_per_page = min(100, max_results)  # Serper max is 100 per request
+        
+        logger.info(f"🔍 Starting exact keyword search for '{keyword}' (target: {max_results} URLs)")
+        
+        try:
+            # Get API key
+            api_key = get_working_serper_key()
+            if not api_key:
+                logger.error("❌ No working Serper API key found")
+                return []
+            
+            # Do web search for exact keyword (no location)
+            logger.info(f"📄 Searching for exact keyword '{keyword}' (up to {results_per_page} results)...")
+            search_results = search_google_web_serper(
+                api_key=api_key,
+                query=keyword,  # Exact keyword search
+                location=None,  # No location - pure keyword search
+                num_results=results_per_page
+            )
+            
+            if search_results.get('error'):
+                logger.error(f"❌ Search error: {search_results['error']}")
+                return []
+            
+            businesses = search_results.get('businesses', [])
+            logger.info(f"✅ Found {len(businesses)} URLs for keyword '{keyword}'")
+            
+            # Update session status
+            if session_id in self.active_sessions:
+                self.active_sessions[session_id].update({
+                    'current_location': f"Processing {len(businesses)} URLs for '{keyword}'",
+                    'total_businesses': len(businesses)
+                })
+            
+            return businesses
+            
+        except Exception as e:
+            logger.error(f"❌ Error searching for keyword '{keyword}': {str(e)}")
+            return []
     
     def _search_businesses_paginated(self, keywords: str, city: str, max_results: int, session_id: int) -> List[Dict]:
         """
