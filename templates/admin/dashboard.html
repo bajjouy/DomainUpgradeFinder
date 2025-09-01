@@ -2,6 +2,10 @@
 
 {% block title %}Admin Dashboard - Domain Upgrade Pro{% endblock %}
 
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
 {% block content %}
 <!-- Header Section -->
 <div class="row align-items-center mb-4">
@@ -371,6 +375,7 @@
                         </div>
                     </a>
                     <form method="POST" action="{{ url_for('sync_api_credits') }}" class="mb-0">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-outline-info w-100 d-flex align-items-center">
                             <i class="fas fa-sync-alt me-3"></i>
                             <div class="text-start flex-grow-1">
