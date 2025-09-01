@@ -105,8 +105,11 @@
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5>Recent Google Searches</h5>
+                <button onclick="deleteAllSearches()" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-trash-alt"></i> Delete All
+                </button>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -149,6 +152,9 @@
                                         <a href="{{ url_for('download_business_csv', session_id=search.id) }}" class="btn btn-sm btn-outline-success">
                                             <i class="fas fa-download"></i> CSV
                                         </a>
+                                        <button onclick="deleteSearch({{ search.id }}, '{{ search.keywords }}', {{ search.total_businesses_found or 0 }})" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
                                     {% elif search.status == 'processing' %}
                                         <a href="{{ url_for('business_search_processor', session_id=search.id) }}" class="btn btn-sm btn-outline-info">
                                             <i class="fas fa-spinner"></i> Status
@@ -189,5 +195,57 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('keywords').addEventListener('input', updateCoinEstimate);
     updateCoinEstimate(); // Initial calculation
 });
+
+// Delete individual search function with confirmation
+function deleteSearch(sessionId, keywords, totalResults) {
+    if (confirm(`Are you sure you want to delete the search for "${keywords}"?\n\nThis will permanently remove all ${totalResults} search results and cannot be undone.`)) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete-business-search-session/' + sessionId;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('input[name="csrf_token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Delete all searches function with confirmation
+function deleteAllSearches() {
+    const searchCount = {{ recent_searches|length if recent_searches else 0 }};
+    if (searchCount === 0) {
+        alert('No searches to delete.');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to delete ALL ${searchCount} search${searchCount > 1 ? 'es' : ''}?\n\nThis will permanently remove all search results and cannot be undone.`)) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete-all-business-searches';
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('input[name="csrf_token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
 </script>
 {% endblock %}

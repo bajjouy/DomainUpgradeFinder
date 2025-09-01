@@ -2654,6 +2654,45 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         
         return redirect(url_for('business_search'))
 
+    @app.route('/delete-all-business-searches', methods=['POST'])
+    @client_required
+    def delete_all_business_searches():
+        """Delete all business search sessions for the current user"""
+        from models import BusinessSearchSession, BusinessData
+        
+        try:
+            # Get all sessions for the current user
+            user_sessions = BusinessSearchSession.query.filter_by(user_id=current_user.id).all()
+            
+            if not user_sessions:
+                flash('No searches found to delete', 'info')
+                return redirect(url_for('business_search'))
+            
+            total_sessions = len(user_sessions)
+            total_businesses = 0
+            
+            # Count total businesses that will be deleted
+            for session in user_sessions:
+                total_businesses += BusinessData.query.filter_by(session_id=session.id).count()
+            
+            # Delete all business data for user sessions
+            for session in user_sessions:
+                BusinessData.query.filter_by(session_id=session.id).delete()
+            
+            # Delete all user sessions
+            BusinessSearchSession.query.filter_by(user_id=current_user.id).delete()
+            
+            db.session.commit()
+            
+            flash(f'Successfully deleted all {total_sessions} searches with {total_businesses} total results', 'success')
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error deleting all sessions for user {current_user.id}: {str(e)}")
+            flash('Error deleting all searches. Please try again.', 'error')
+        
+        return redirect(url_for('business_search'))
+
     return app
 
 if __name__ == '__main__':
