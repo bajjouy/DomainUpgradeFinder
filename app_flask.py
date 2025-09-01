@@ -390,23 +390,44 @@ def create_app():
     @app.route('/admin/api-keys/add', methods=['POST'])
     @admin_required
     def add_api_key():
+        from serper_api_utils import check_serper_credits
+        
         key_name = request.form.get('key_name')
         key_value = request.form.get('key_value')
         daily_limit = int(request.form.get('daily_limit', 2500))
-        
         total_credits = int(request.form.get('total_credits', 2500))
+        
+        # Validate API key before adding
+        validation_result = check_serper_credits(key_value)
+        
+        if validation_result.get('error'):
+            flash(f'❌ API key validation failed: {validation_result["error"]}', 'error')
+            return redirect(url_for('admin_api_keys'))
+        
+        # Check if key already exists
+        existing_key = APIKey.query.filter_by(key_value=key_value).first()
+        if existing_key:
+            flash('❌ API key already exists in the system', 'error')
+            return redirect(url_for('admin_api_keys'))
+        
+        # Use live data from validation for accurate credits
+        live_total_credits = validation_result.get('total_credits', total_credits)
+        live_credits_left = validation_result.get('credits_left', total_credits)
+        live_credits_used = live_total_credits - live_credits_left
         
         api_key = APIKey()
         api_key.key_name = key_name
         api_key.key_value = key_value
         api_key.daily_limit = daily_limit
-        api_key.total_credits = total_credits
+        api_key.total_credits = live_total_credits
+        api_key.credits_used = live_credits_used
+        api_key.last_credit_check = datetime.utcnow()
         api_key.status = APIKeyStatus.ACTIVE
         
         db.session.add(api_key)
         db.session.commit()
         
-        flash('API key added successfully', 'success')
+        flash(f'✅ API key added successfully with {live_credits_left} credits available', 'success')
         return redirect(url_for('admin_api_keys'))
     
     @app.route('/admin/api-keys/bulk-add', methods=['POST'])
@@ -447,6 +468,8 @@ def create_app():
         skipped_count = 0
         errors = []
         
+        validation_failed_count = 0
+        
         for i, key_value in enumerate(api_keys_list):
             try:
                 # Generate sequential name
@@ -456,34 +479,61 @@ def create_app():
                 existing_key = APIKey.query.filter_by(key_value=key_value).first()
                 if existing_key:
                     skipped_count += 1
+                    errors.append(f'{key_name}: Already exists')
                     continue
                 
-                # Create new API key
+                # Validate API key before adding
+                from serper_api_utils import check_serper_credits
+                print(f"DEBUG: Validating API key {key_name}...")
+                validation_result = check_serper_credits(key_value)
+                
+                if validation_result.get('error'):
+                    validation_failed_count += 1
+                    errors.append(f'{key_name}: Validation failed - {validation_result["error"]}')
+                    continue
+                
+                # Use live data from validation for accurate credits
+                live_total_credits = validation_result.get('total_credits', bulk_total_credits)
+                live_credits_left = validation_result.get('credits_left', bulk_total_credits)
+                live_credits_used = live_total_credits - live_credits_left
+                
+                # Create new API key with validated data
                 api_key = APIKey()
                 api_key.key_name = key_name
                 api_key.key_value = key_value
                 api_key.daily_limit = bulk_daily_limit
-                api_key.total_credits = bulk_total_credits
+                api_key.total_credits = live_total_credits
+                api_key.credits_used = live_credits_used
+                api_key.last_credit_check = datetime.utcnow()
                 api_key.status = APIKeyStatus.ACTIVE
                 
                 db.session.add(api_key)
                 added_count += 1
+                print(f"DEBUG: Successfully validated and added {key_name} with {live_credits_left} credits")
                 
             except Exception as e:
-                errors.append(f'Key {i+1}: {str(e)}')
+                errors.append(f'Key {i+1}: Unexpected error - {str(e)}')
         
         try:
             db.session.commit()
             
-            # Create success message
-            success_msg = f'✅ Successfully imported {added_count} API keys'
+            # Flash comprehensive summary
+            if added_count > 0:
+                flash(f'✅ Successfully added {added_count} working API keys', 'success')
+            
             if skipped_count > 0:
-                success_msg += f' (skipped {skipped_count} duplicates)'
+                flash(f'⚠️ Skipped {skipped_count} duplicate keys', 'warning')
+                
+            if validation_failed_count > 0:
+                flash(f'❌ Failed validation for {validation_failed_count} keys', 'error')
             
-            flash(success_msg, 'success')
-            
+            # Show detailed errors if any
             if errors:
-                flash(f'⚠️ Some errors occurred: {"; ".join(errors[:3])}', 'warning')
+                flash('Detailed results:', 'info')
+                for error in errors[:10]:  # Limit to first 10 errors
+                    flash(f'• {error}', 'warning')
+                if len(errors) > 10:
+                    flash(f'• ... and {len(errors) - 10} more errors', 'warning')
                 
         except Exception as e:
             db.session.rollback()
