@@ -280,6 +280,25 @@ class SMTPSettings(db.Model):
     def __repr__(self):
         return f'<SMTPSettings {self.sender_email}>'
 
+class SystemSettings(db.Model):
+    __tablename__ = 'system_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    max_urls_per_keyword = db.Column(db.Integer, nullable=False, default=2000)
+    description = db.Column(db.String(500), default="Maximum number of URLs to scrape per keyword from Google search")
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    @classmethod
+    def get_max_urls_per_keyword(cls):
+        """Get the current URL limit per keyword"""
+        settings = cls.query.filter_by(is_active=True).first()
+        return settings.max_urls_per_keyword if settings else 2000
+    
+    def __repr__(self):
+        return f'<SystemSettings max_urls_per_keyword={self.max_urls_per_keyword}>'
+
 class ContactForm(db.Model):
     __tablename__ = 'contact_forms'
     

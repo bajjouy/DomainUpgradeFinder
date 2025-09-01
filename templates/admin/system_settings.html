@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings - Admin{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-cog"></i> System Settings</h2>
+                <p class="text-muted">Configure global system parameters and limits</p>
+            </div>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-search"></i> Search Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label for="max_urls_per_keyword" class="form-label">
+                            <strong>Maximum URLs per Keyword</strong>
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="max_urls_per_keyword" 
+                               name="max_urls_per_keyword" 
+                               value="{{ settings.max_urls_per_keyword if settings else 2000 }}"
+                               min="10" 
+                               max="10000" 
+                               required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle"></i> 
+                            Maximum number of URLs to scrape from Google search per keyword. Higher values will use more API credits.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" 
+                                  id="description" 
+                                  name="description" 
+                                  rows="3">{{ settings.description if settings else "Maximum number of URLs to scrape per keyword from Google search" }}</textarea>
+                        <div class="form-text">Internal description for this setting</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="is_active" 
+                                   name="is_active" 
+                                   {% if not settings or settings.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                Enable this configuration
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Current Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Current URL Limit:</strong>
+                    <span class="badge bg-primary fs-6">{{ settings.max_urls_per_keyword if settings else 2000 }}</span>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Status:</strong>
+                    {% if settings and settings.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-warning">Using Default</span>
+                    {% endif %}
+                </div>
+                
+                {% if settings %}
+                <div class="mb-3">
+                    <strong>Last Updated:</strong>
+                    <small>{{ settings.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                </div>
+                {% endif %}
+                
+                <hr>
+                <div class="alert alert-info small">
+                    <i class="fas fa-lightbulb"></i>
+                    <strong>Tip:</strong> Higher URL limits will find more results but consume more API credits. Recommended range: 500-2000 URLs per keyword.
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line"></i> Impact Calculator</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Estimated API Usage:</strong>
+                </div>
+                <ul class="small">
+                    <li>100 URLs = ~10 API calls</li>
+                    <li>500 URLs = ~50 API calls</li>
+                    <li>1000 URLs = ~100 API calls</li>
+                    <li>2000 URLs = ~200 API calls</li>
+                </ul>
+                <div class="alert alert-warning small">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Note:</strong> Each keyword search will use approximately this many API credits.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const urlLimitInput = document.getElementById('max_urls_per_keyword');
+    
+    urlLimitInput.addEventListener('input', function() {
+        const value = parseInt(this.value);
+        const estimatedCalls = Math.ceil(value / 10);
+        
+        // You could add real-time calculation display here
+        console.log(`URLs: ${value}, Estimated API calls: ${estimatedCalls}`);
+    });
+});
+</script>
+{% endblock %}

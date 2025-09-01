@@ -1751,6 +1751,46 @@ def create_app():
         smtp_settings = SMTPSettings.query.first()
         return render_template('admin/smtp_settings.html', smtp_settings=smtp_settings)
     
+    @app.route('/admin/system-settings', methods=['GET', 'POST'])
+    @admin_required
+    def admin_system_settings():
+        """Admin page for configuring system-wide settings like URL limits per keyword"""
+        from models import SystemSettings
+        
+        if request.method == 'POST':
+            # Get form data
+            max_urls_per_keyword = int(request.form.get('max_urls_per_keyword', 2000))
+            description = request.form.get('description', 'Maximum number of URLs to scrape per keyword from Google search')
+            is_active = 'is_active' in request.form
+            
+            # Validate URL limit
+            if max_urls_per_keyword < 10 or max_urls_per_keyword > 10000:
+                flash('URL limit must be between 10 and 10,000', 'error')
+                return render_template('admin/system_settings.html')
+            
+            # Check if settings exist, update or create
+            settings = SystemSettings.query.first()
+            if settings:
+                settings.max_urls_per_keyword = max_urls_per_keyword
+                settings.description = description
+                settings.is_active = is_active
+                settings.updated_at = datetime.utcnow()
+            else:
+                settings = SystemSettings(
+                    max_urls_per_keyword=max_urls_per_keyword,
+                    description=description,
+                    is_active=is_active
+                )
+                db.session.add(settings)
+            
+            db.session.commit()
+            flash(f'✅ System settings saved! URL limit set to {max_urls_per_keyword} per keyword.', 'success')
+            return redirect(url_for('admin_system_settings'))
+        
+        # GET request - show current settings
+        settings = SystemSettings.query.first()
+        return render_template('admin/system_settings.html', settings=settings)
+    
     # Contact Form Routes
     @app.route('/contact', methods=['GET', 'POST'])
     def contact():

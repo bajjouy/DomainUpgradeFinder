@@ -132,8 +132,12 @@ class BusinessSearchService:
                                 child_sessions.append(child_session)
                                 
                                 # Search for this exact keyword using web search (no location)
+                                # Get URL limit from system settings instead of session default
+                                from models import SystemSettings
+                                max_urls_limit = SystemSettings.get_max_urls_per_keyword()
+                                
                                 businesses = self._search_web_results_paginated(
-                                    keyword, session.max_results_per_city, child_session.id
+                                    keyword, max_urls_limit, child_session.id
                                 )
                                 
                                 # Save businesses for this child session
@@ -184,8 +188,12 @@ class BusinessSearchService:
                         else:
                             # Single keyword - do exact web search (not location-based)
                             keyword = keywords_list[0] if keywords_list else session.keywords
+                            # Get URL limit from system settings instead of session default
+                            from models import SystemSettings
+                            max_urls_limit = SystemSettings.get_max_urls_per_keyword()
+                            
                             businesses = self._search_web_results_paginated(
-                                keyword, session.max_results_per_city, session_id
+                                keyword, max_urls_limit, session_id
                             )
                             
                             # Tag each business with the keyword
