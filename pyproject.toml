@@ -26,4 +26,5 @@ dependencies = [
     "trafilatura>=2.0.0",
     "googlemaps>=4.10.0",
     "geopy>=2.4.1",
+    "sendgrid>=6.12.4",
 ]

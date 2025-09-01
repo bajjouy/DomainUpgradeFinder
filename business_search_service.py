@@ -327,6 +327,26 @@ class BusinessSearchService:
                     'total_businesses': total_businesses_found
                 }
                 
+                # Send search completion email notification for large searches
+                try:
+                    if total_businesses_found >= 50:  # Only for substantial searches
+                        from email_service import email_service
+                        from models import User
+                        user = User.query.get(session.user_id)
+                        if user:
+                            keywords_count = len(session.get_keywords_list())
+                            credits_used = keywords_count * 10  # Approximate credits used
+                            
+                            email_service.send_search_completion_notification(
+                                user.email,
+                                user.email.split('@')[0],
+                                keywords_count,
+                                total_businesses_found,
+                                credits_used
+                            )
+                except Exception as e:
+                    logger.error(f"Failed to send search completion email: {e}")
+                
                 logger.info(f"Completed session {session_id}: {total_businesses_found} businesses found")
             
         except Exception as e:

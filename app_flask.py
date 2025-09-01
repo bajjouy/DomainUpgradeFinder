@@ -206,6 +206,13 @@ def create_app():
             db.session.add(user)
             db.session.commit()
             
+            # Send welcome email
+            try:
+                from email_service import email_service
+                email_service.send_welcome_email(user.email, user.email.split('@')[0])
+            except Exception as e:
+                print(f"Failed to send welcome email: {e}")
+            
             login_user(user)
             flash(f'Account created! You have {Config.FREE_TRIAL_COINS} free trial coins.', 'success')
             return redirect(url_for('client_dashboard'))
@@ -767,6 +774,20 @@ def create_app():
             flash(f'Deducted {abs(amount)} coins from {user.email}', 'success')
         
         db.session.commit()
+        
+        # Send email notification to user
+        try:
+            from email_service import email_service
+            email_service.send_coin_adjustment_notification(
+                user.email, 
+                user.email.split('@')[0],  # Use email prefix as name
+                amount, 
+                reason, 
+                user.coins
+            )
+        except Exception as e:
+            print(f"Failed to send coin adjustment email: {e}")
+        
         return redirect(url_for('admin_users'))
     
     @app.route('/admin/pricing')
@@ -866,6 +887,17 @@ def create_app():
         user.user_active = not user.user_active
         db.session.commit()
         
+        # Send account status change notification
+        try:
+            from email_service import email_service
+            email_service.send_account_status_change_notification(
+                user.email, 
+                user.email.split('@')[0], 
+                user.user_active
+            )
+        except Exception as e:
+            print(f"Failed to send account status change email: {e}")
+        
         status = "activated" if user.user_active else "deactivated"
         flash(f'User {user.email} has been {status}.', 'success')
         return redirect(url_for('admin_users'))
@@ -883,6 +915,17 @@ def create_app():
         # Hash the new password
         user.password_hash = hash_password(new_password)
         db.session.commit()
+        
+        # Send password change notification
+        try:
+            from email_service import email_service
+            email_service.send_password_change_notification(
+                user.email, 
+                user.email.split('@')[0], 
+                changed_by_admin=True
+            )
+        except Exception as e:
+            print(f"Failed to send password change email: {e}")
         
         flash(f'Password changed successfully for {user.email}.', 'success')
         return redirect(url_for('admin_users'))
@@ -1584,10 +1627,24 @@ def create_app():
             
             if intent.status == 'succeeded':
                 coins = int(intent.metadata.get('coins', 0))
+                amount_paid = intent.amount / 100  # Convert from cents to dollars
                 
                 # Add coins to user account
                 current_user.add_coins(coins, 'purchase')
                 db.session.commit()
+                
+                # Send purchase confirmation email
+                try:
+                    from email_service import email_service
+                    email_service.send_credit_purchase_notification(
+                        current_user.email,
+                        current_user.email.split('@')[0],
+                        amount_paid,
+                        coins,
+                        payment_intent_id
+                    )
+                except Exception as e:
+                    print(f"Failed to send purchase confirmation email: {e}")
                 
                 flash(f'Payment successful! {coins} coins added to your account.', 'success')
             else:

@@ -53,4 +53,4 @@ localPort = 8501
 externalPort = 3000
 
 [agent]
-integrations = ["web_scraper==1.0.0"]
+integrations = ["web_scraper==1.0.0", "python_sendgrid==1.0.0"]
