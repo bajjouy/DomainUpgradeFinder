@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Business Search Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-cogs"></i> Business Search Processing</h2>
+        <p class="text-muted">Searching for "<strong>{{ session.keywords }}</strong>" businesses across {{ session.get_cities_list()|length }} cities using Google Maps data.</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Processing Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-spinner fa-spin" id="spinnerIcon"></i> Processing Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" id="progressBar"
+                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            0%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Status:</strong> <span id="statusText" class="badge bg-warning">Starting...</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Current City:</strong> <span id="currentLocation" class="text-muted">-</span>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h4 id="totalBusinesses">0</h4>
+                                <small>Businesses Found</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h4 id="citiesProcessed">0</h4>
+                                <small>Cities Processed</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h4 id="processingTime">0s</h4>
+                                <small>Processing Time</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h4 id="averagePerCity">0</h4>
+                                <small>Avg. per City</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Details -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list"></i> Search Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-search"></i> Search Configuration</h6>
+                    <ul class="mb-0">
+                        <li><strong>Keywords:</strong> {{ session.keywords }}</li>
+                        <li><strong>Cities:</strong> {{ session.get_cities_list()|length }} locations</li>
+                        <li><strong>Max Results per City:</strong> {{ session.max_results_per_city }}</li>
+                        <li><strong>Expected Total:</strong> Up to {{ session.get_cities_list()|length * session.max_results_per_city }} businesses</li>
+                    </ul>
+                </div>
+                
+                <h6>Cities to Process:</h6>
+                <div class="row">
+                    {% for city in session.get_cities_list() %}
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="city-status" data-city="{{ city }}" id="city-{{ loop.index0 }}">
+                                <i class="fas fa-clock text-muted"></i>
+                            </span>
+                            <span class="ms-2">{{ city }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Processing Features</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <h6>What We're Collecting:</h6>
+                    <ul class="small mb-0">
+                        <li>Business names & addresses</li>
+                        <li>Phone numbers & websites</li>
+                        <li>Email addresses (when available)</li>
+                        <li>Google ratings & review counts</li>
+                        <li>GPS coordinates</li>
+                        <li>Business categories & price levels</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-bolt"></i> Powered by:</h6>
+                    <ul class="small mb-0">
+                        <li>Google Maps Places API via Serper.dev</li>
+                        <li>Advanced API rotation for reliability</li>
+                        <li>Intelligent caching for speed</li>
+                        <li>Email extraction from websites</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-download"></i> Export Options</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">
+                    Once processing completes, you'll be able to download:
+                </p>
+                <ul class="small">
+                    <li><strong>Complete CSV:</strong> All businesses in one file</li>
+                    <li><strong>City-specific CSVs:</strong> Separate file per city</li>
+                    <li><strong>Filtered exports:</strong> By rating, review count, etc.</li>
+                </ul>
+                
+                <div class="text-center mt-3" id="downloadSection" style="display: none;">
+                    <a href="#" id="downloadBtn" class="btn btn-success btn-sm">
+                        <i class="fas fa-download"></i> Download Results
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const sessionId = {{ session.id }};
+const totalCities = {{ session.get_cities_list()|length }};
+const cities = {{ session.get_cities_list() | tojson }};
+let startTime = new Date().getTime();
+let processingStarted = false;
+
+function updateStatus() {
+    fetch(`/api/business-search-status/${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            const progress = data.progress || 0;
+            const status = data.status || 'processing';
+            const currentLocation = data.current_location || 'Starting...';
+            const totalBusinesses = data.total_businesses || 0;
+            
+            // Update progress bar
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressBar').textContent = Math.round(progress) + '%';
+            
+            // Update status
+            const statusBadge = document.getElementById('statusText');
+            if (status === 'completed') {
+                statusBadge.className = 'badge bg-success';
+                statusBadge.textContent = 'Completed';
+                document.getElementById('spinnerIcon').className = 'fas fa-check';
+                
+                // Show download button
+                document.getElementById('downloadSection').style.display = 'block';
+                document.getElementById('downloadBtn').href = `/business-search-results/${sessionId}`;
+                
+                clearInterval(statusInterval);
+            } else if (status === 'processing') {
+                statusBadge.className = 'badge bg-warning';
+                statusBadge.textContent = 'Processing';
+                processingStarted = true;
+            } else if (status === 'failed') {
+                statusBadge.className = 'badge bg-danger';
+                statusBadge.textContent = 'Failed';
+                document.getElementById('spinnerIcon').className = 'fas fa-exclamation-triangle';
+                clearInterval(statusInterval);
+            }
+            
+            // Update current location
+            document.getElementById('currentLocation').textContent = currentLocation;
+            
+            // Update counters
+            document.getElementById('totalBusinesses').textContent = totalBusinesses;
+            
+            // Calculate cities processed
+            const citiesProcessed = Math.floor((progress / 100) * totalCities);
+            document.getElementById('citiesProcessed').textContent = citiesProcessed;
+            
+            // Update processing time
+            if (processingStarted) {
+                const elapsed = Math.floor((new Date().getTime() - startTime) / 1000);
+                document.getElementById('processingTime').textContent = elapsed + 's';
+            }
+            
+            // Update average per city
+            if (citiesProcessed > 0) {
+                const avgPerCity = Math.round(totalBusinesses / citiesProcessed);
+                document.getElementById('averagePerCity').textContent = avgPerCity;
+            }
+            
+            // Update city status indicators
+            cities.forEach((city, index) => {
+                const cityElement = document.getElementById(`city-${index}`);
+                if (cityElement) {
+                    if (index < citiesProcessed) {
+                        cityElement.innerHTML = '<i class="fas fa-check text-success"></i>';
+                    } else if (city === currentLocation) {
+                        cityElement.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+                    } else {
+                        cityElement.innerHTML = '<i class="fas fa-clock text-muted"></i>';
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error checking status:', error);
+        });
+}
+
+// Check status every 2 seconds
+const statusInterval = setInterval(updateStatus, 2000);
+updateStatus(); // Initial check
+</script>
+{% endblock %}

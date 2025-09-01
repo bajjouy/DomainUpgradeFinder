@@ -294,3 +294,122 @@ class ContactForm(db.Model):
     
     def __repr__(self):
         return f'<ContactForm {self.name} - {self.subject}>'
+
+# Google Maps Business Search Models
+class BusinessSearchSession(db.Model):
+    __tablename__ = 'business_search_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    keywords = db.Column(db.String(500), nullable=False)
+    cities = db.Column(db.Text, nullable=False)  # JSON array of cities
+    total_businesses_found = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='processing')  # processing, completed, failed
+    progress = db.Column(db.Float, default=0.0)  # Progress percentage
+    current_location = db.Column(db.String(200))  # Currently processing city
+    processing_time = db.Column(db.Float)  # Total processing time in seconds
+    max_results_per_city = db.Column(db.Integer, default=20)  # Business result limit per city
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    
+    # Relationships
+    user = db.relationship('User', backref='business_search_sessions')
+    businesses = db.relationship('BusinessData', backref='search_session', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<BusinessSearchSession {self.user_id}: {self.keywords}>'
+    
+    def get_cities_list(self):
+        """Parse cities JSON string to list"""
+        try:
+            return json.loads(self.cities) if self.cities else []
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def set_cities_list(self, cities_list):
+        """Convert cities list to JSON string"""
+        self.cities = json.dumps(cities_list)
+
+class BusinessData(db.Model):
+    __tablename__ = 'business_data'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('business_search_sessions.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Business Information
+    name = db.Column(db.String(300), nullable=False)
+    address = db.Column(db.Text)
+    city = db.Column(db.String(200))
+    phone = db.Column(db.String(50))
+    website = db.Column(db.String(500))
+    email = db.Column(db.String(200))  # If available from web scraping
+    
+    # Google Maps Data
+    place_id = db.Column(db.String(200), unique=True)  # Google Places unique ID
+    rating = db.Column(db.Float)
+    user_ratings_total = db.Column(db.Integer)
+    price_level = db.Column(db.Integer)  # 0-4 scale
+    business_status = db.Column(db.String(50))  # OPERATIONAL, CLOSED_TEMPORARILY, etc.
+    types = db.Column(db.Text)  # JSON array of business types
+    
+    # Location Data
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    
+    # Additional extracted data
+    opening_hours = db.Column(db.Text)  # JSON of opening hours
+    photos = db.Column(db.Text)  # JSON array of photo references
+    reviews_snippet = db.Column(db.Text)  # Sample of reviews
+    
+    # Metadata
+    keywords_searched = db.Column(db.String(500))  # Keywords that found this business
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='found_businesses')
+    
+    def __repr__(self):
+        return f'<BusinessData {self.name} - {self.city}>'
+    
+    def get_types_list(self):
+        """Parse business types JSON to list"""
+        try:
+            return json.loads(self.types) if self.types else []
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def set_types_list(self, types_list):
+        """Convert types list to JSON string"""
+        self.types = json.dumps(types_list)
+    
+    def get_photos_list(self):
+        """Parse photos JSON to list"""
+        try:
+            return json.loads(self.photos) if self.photos else []
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def set_photos_list(self, photos_list):
+        """Convert photos list to JSON string"""
+        self.photos = json.dumps(photos_list)
+    
+    def to_dict(self):
+        """Convert business data to dictionary for CSV export"""
+        return {
+            'Business Name': self.name,
+            'Address': self.address,
+            'City': self.city,
+            'Phone': self.phone,
+            'Website': self.website,
+            'Email': self.email or 'Not available',
+            'Rating': self.rating,
+            'Total Reviews': self.user_ratings_total,
+            'Price Level': self.price_level,
+            'Business Status': self.business_status,
+            'Business Types': ', '.join(self.get_types_list()),
+            'Latitude': self.latitude,
+            'Longitude': self.longitude,
+            'Keywords Found': self.keywords_searched,
+            'Search Date': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else ''
+        }

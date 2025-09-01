@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Business Lead Generator - Domain Upgrade Finder{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-map-marked-alt"></i> Business Lead Generator</h2>
+        <p class="text-muted">Find businesses in specific cities using Google Maps data. Perfect for domain upgrade outreach and lead generation.</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Search for Businesses</h5>
+                <small class="text-muted">You have {{ current_user.coins }} coins available</small>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label for="keywords" class="form-label">Business Keywords</label>
+                        <input type="text" class="form-control" id="keywords" name="keywords" 
+                               placeholder="e.g., restaurants, plumbers, law firms, coffee shops" required>
+                        <div class="form-text">
+                            Enter the type of business you want to find (single keyword works best)
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="cities" class="form-label">Cities (one per line)</label>
+                        <textarea class="form-control" id="cities" name="cities" rows="6" 
+                                placeholder="New York, NY&#10;Los Angeles, CA&#10;Chicago, IL&#10;Houston, TX&#10;Phoenix, AZ" required></textarea>
+                        <div class="form-text">
+                            Enter cities with state (e.g., "Dallas, TX"). Each city costs 1 coin.
+                            <br><small class="text-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>Tip:</strong> Use full city names with state abbreviations for best results.
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="max_results" class="form-label">Results per City</label>
+                        <select class="form-control" id="max_results" name="max_results">
+                            <option value="10">10 businesses per city</option>
+                            <option value="20" selected>20 businesses per city</option>
+                            <option value="30">30 businesses per city</option>
+                            <option value="50">50 businesses per city</option>
+                        </select>
+                        <div class="form-text">
+                            More results = better lead coverage but may include lower-quality matches
+                        </div>
+                    </div>
+                    
+                    {% if current_user.coins > 0 %}
+                    <button type="submit" class="btn btn-success w-100" id="searchBtn">
+                        <i class="fas fa-search"></i> Start Business Search
+                    </button>
+                    {% else %}
+                    <a href="{{ url_for('buy_coins') }}" class="btn btn-warning w-100">
+                        <i class="fas fa-coins"></i> Buy Coins to Search
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>How Business Search Works</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>Enter Keywords:</strong> Type the business type you want to find</li>
+                    <li><strong>List Cities:</strong> Add cities where you want to find these businesses</li>
+                    <li><strong>AI Processing:</strong> We search Google Maps for matching businesses</li>
+                    <li><strong>Get Results:</strong> Download comprehensive business data including:</li>
+                </ol>
+                
+                <ul class="list-unstyled mt-3">
+                    <li><i class="fas fa-check text-success"></i> Business names</li>
+                    <li><i class="fas fa-check text-success"></i> Complete addresses</li>
+                    <li><i class="fas fa-check text-success"></i> Phone numbers</li>
+                    <li><i class="fas fa-check text-success"></i> Website URLs</li>
+                    <li><i class="fas fa-check text-success"></i> Email addresses (when available)</li>
+                    <li><i class="fas fa-check text-success"></i> Business ratings & reviews</li>
+                    <li><i class="fas fa-check text-success"></i> GPS coordinates</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Perfect for Domain Sales</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">
+                    <i class="fas fa-lightbulb text-warning"></i> 
+                    <strong>Pro Tip:</strong> Search for businesses that match your premium domain names. 
+                    For example, if you own "BestPizza.com", search for "pizza restaurants" in major cities 
+                    to find potential buyers who could upgrade their domain.
+                </p>
+                
+                <div class="alert alert-info small mb-0">
+                    <i class="fas fa-download"></i> All results are exported as CSV files for easy outreach management.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Business Searches -->
+{% if recent_searches %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Recent Business Searches</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Keywords</th>
+                                <th>Cities</th>
+                                <th>Status</th>
+                                <th>Businesses Found</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for search in recent_searches %}
+                            <tr>
+                                <td><strong>{{ search.keywords }}</strong></td>
+                                <td>
+                                    <small>
+                                        {% for city in search.get_cities_list()[:3] %}
+                                            {{ city }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                        {% if search.get_cities_list()|length > 3 %}
+                                            <span class="text-muted">... +{{ search.get_cities_list()|length - 3 }} more</span>
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if search.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif search.status == 'processing' %}
+                                        <span class="badge bg-warning">Processing</span>
+                                    {% elif search.status == 'failed' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if search.status == 'completed' %}
+                                        <strong>{{ search.total_businesses_found }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ search.created_at.strftime('%m/%d %H:%M') }}</small></td>
+                                <td>
+                                    {% if search.status == 'completed' %}
+                                        <a href="{{ url_for('business_search_results', session_id=search.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <a href="{{ url_for('download_business_csv', session_id=search.id) }}" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-download"></i> CSV
+                                        </a>
+                                    {% elif search.status == 'processing' %}
+                                        <a href="{{ url_for('business_search_processor', session_id=search.id) }}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-spinner"></i> Status
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('searchBtn');
+    const citiesTextarea = document.getElementById('cities');
+    
+    // Dynamic coin calculation
+    function updateCoinEstimate() {
+        const citiesText = citiesTextarea.value.trim();
+        if (citiesText) {
+            const cities = citiesText.split('\n').filter(city => city.trim().length > 0);
+            const coinCost = cities.length;
+            
+            if (cities.length > 0) {
+                submitBtn.innerHTML = `<i class="fas fa-search"></i> Start Search (${coinCost} coin${coinCost > 1 ? 's' : ''})`;
+            }
+        }
+    }
+    
+    citiesTextarea.addEventListener('input', updateCoinEstimate);
+    updateCoinEstimate(); // Initial calculation
+});
+</script>
+{% endblock %}

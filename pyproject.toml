@@ -23,4 +23,7 @@ dependencies = [
     "email-validator>=2.3.0",
     "flask-wtf>=1.2.2",
     "flask-limiter>=3.12",
+    "trafilatura>=2.0.0",
+    "googlemaps>=4.10.0",
+    "geopy>=2.4.1",
 ]

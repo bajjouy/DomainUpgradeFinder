@@ -2283,6 +2283,186 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         # GET request - show installation form
         return render_template('install.html')
 
+    # ==================== BUSINESS SEARCH ROUTES ====================
+    
+    @app.route('/business-search', methods=['GET', 'POST'])
+    @client_required
+    @limiter.limit("30 per hour")  # Rate limit for business searches
+    @secure_headers
+    def business_search():
+        from business_search_service import business_search_service
+        from models import BusinessSearchSession
+        
+        if request.method == 'POST':
+            # Get and validate input
+            keywords = sanitize_input(request.form.get('keywords', ''))
+            cities_input = sanitize_input(request.form.get('cities', ''))
+            max_results = int(request.form.get('max_results', 20))
+            
+            # Validate inputs
+            validation_rules = {
+                'keywords': {'required': True, 'type': 'safe_string', 'max_length': 500},
+                'cities': {'required': True, 'type': 'safe_string'}
+            }
+            
+            is_valid, errors = validate_form_data({
+                'keywords': keywords,
+                'cities': cities_input
+            }, validation_rules)
+            
+            if not is_valid:
+                for error in errors:
+                    flash(error, 'error')
+                return render_template('client/business_search.html')
+            
+            # Parse cities (one per line)
+            cities = [city.strip() for city in cities_input.split('\n') if city.strip()]
+            
+            if not cities:
+                flash('Please enter at least one city', 'error')
+                return render_template('client/business_search.html')
+            
+            # Check if user has enough coins
+            total_cost = len(cities)  # 1 coin per city
+            if current_user.role != UserRole.ADMIN and current_user.coins < total_cost:
+                flash(f'You need {total_cost} coins for this search but only have {current_user.coins} coins.', 'error')
+                return redirect(url_for('buy_coins'))
+            
+            # Deduct coins (skip for admin users)
+            if current_user.role != UserRole.ADMIN:
+                if not current_user.deduct_coins(total_cost, 'business_search'):
+                    flash('Insufficient coins for this search', 'error')
+                    return redirect(url_for('buy_coins'))
+                db.session.commit()
+            
+            # Start business search
+            try:
+                session_id = business_search_service.start_business_search(
+                    user_id=current_user.id,
+                    keywords=keywords,
+                    cities=cities,
+                    max_results_per_city=max_results
+                )
+                
+                flash(f'Business search started! Processing {len(cities)} cities...', 'success')
+                return redirect(url_for('business_search_processor', session_id=session_id))
+                
+            except Exception as e:
+                logger.error(f"Error starting business search: {str(e)}")
+                flash('Error starting business search. Please try again.', 'error')
+                return render_template('client/business_search.html')
+        
+        # GET request - show search form with recent searches
+        recent_searches = BusinessSearchSession.query.filter_by(
+            user_id=current_user.id
+        ).order_by(BusinessSearchSession.created_at.desc()).limit(10).all()
+        
+        return render_template('client/business_search.html', recent_searches=recent_searches)
+    
+    @app.route('/business-search-processor/<int:session_id>')
+    @client_required
+    @secure_headers
+    def business_search_processor(session_id):
+        from models import BusinessSearchSession
+        
+        # Verify user owns this session
+        session = BusinessSearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id
+        ).first_or_404()
+        
+        return render_template('client/business_search_processor.html', session=session)
+    
+    @app.route('/api/business-search-status/<int:session_id>')
+    @client_required
+    @csrf.exempt  # API endpoint
+    def business_search_status(session_id):
+        from business_search_service import business_search_service
+        from models import BusinessSearchSession
+        
+        # Verify user owns this session
+        session = BusinessSearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id
+        ).first()
+        
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        
+        # Get status from service
+        status = business_search_service.get_session_status(session_id)
+        
+        return jsonify(status)
+    
+    @app.route('/business-search-results/<int:session_id>')
+    @client_required
+    @secure_headers
+    def business_search_results(session_id):
+        from business_search_service import business_search_service
+        
+        # Get results from service
+        results = business_search_service.get_session_results(session_id, current_user.id)
+        
+        if 'error' in results:
+            flash(results['error'], 'error')
+            return redirect(url_for('business_search'))
+        
+        return render_template('client/business_search_results.html', results=results)
+    
+    @app.route('/download-business-csv/<int:session_id>')
+    @client_required
+    def download_business_csv(session_id):
+        from business_search_service import business_search_service
+        from models import BusinessData
+        import csv
+        import io
+        
+        # Get session results
+        results = business_search_service.get_session_results(session_id, current_user.id)
+        
+        if 'error' in results:
+            flash(results['error'], 'error')
+            return redirect(url_for('business_search'))
+        
+        # Check if filtering by city
+        city_filter = request.args.get('city')
+        
+        # Prepare CSV data
+        output = io.StringIO()
+        
+        if city_filter:
+            # Single city CSV
+            businesses = results['businesses_by_city'].get(city_filter, [])
+            filename = f"businesses_{results['session']['keywords']}_{city_filter}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        else:
+            # All businesses CSV
+            businesses = []
+            for city_businesses in results['businesses_by_city'].values():
+                businesses.extend(city_businesses)
+            filename = f"businesses_{results['session']['keywords']}_all_cities_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        if not businesses:
+            flash('No businesses found to export', 'warning')
+            return redirect(url_for('business_search_results', session_id=session_id))
+        
+        # Write CSV
+        fieldnames = [
+            'Business Name', 'Address', 'City', 'Phone', 'Website', 'Email',
+            'Rating', 'Total Reviews', 'Price Level', 'Business Status',
+            'Business Types', 'Latitude', 'Longitude', 'Keywords Found', 'Search Date'
+        ]
+        
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for business in businesses:
+            writer.writerow(business)
+        
+        # Prepare response
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+
     return app
 
 if __name__ == '__main__':

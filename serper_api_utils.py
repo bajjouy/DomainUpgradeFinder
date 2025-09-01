@@ -104,10 +104,175 @@ def bulk_check_all_keys(api_keys: list) -> Dict:
                 total_live_used += (result['total_credits'] - result['credits_left'])
     
     return {
-        'total_live_remaining': sum(k['credits_left'] for k in key_details),
+        'total_live_remaining': sum(k['credits_left'] or 0 for k in key_details),
         'total_live_credits': total_live_credits,
         'total_live_used': total_live_used,
         'key_details': key_details,
         'errors': errors,
-        'live_data_available': len([k for k in key_details if k['is_live']]) > 0
+        'live_data_available': len([k for k in key_details if k.get('is_live', False)]) > 0
     }
+
+def search_places_serper(api_key: str, query: str, location: str = None, num_results: int = 20) -> Dict:
+    """
+    Search for businesses using Serper.dev Places API
+    
+    Args:
+        api_key: Serper API key
+        query: Search query (e.g., "restaurants", "coffee shops")
+        location: Location to search in (e.g., "New York, NY", "Los Angeles, CA")
+        num_results: Number of results to return (default 20, max 100)
+    
+    Returns:
+        Dict with 'places', 'error', 'credits_used' keys
+    """
+    try:
+        url = "https://google.serper.dev/places"
+        headers = {
+            'X-API-KEY': api_key,
+            'Content-Type': 'application/json'
+        }
+        
+        # Construct search query - combine query with location
+        search_query = query
+        if location:
+            search_query = f"{query} in {location}"
+        
+        payload = {
+            'q': search_query,
+            'num': min(num_results, 100),  # Cap at 100 per API limits
+            'gl': 'us',  # Country code
+            'hl': 'en'   # Language
+        }
+        
+        if location:
+            payload['location'] = location
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            places = data.get('places', [])
+            
+            # Standardize place data format
+            standardized_places = []
+            for place in places:
+                standardized_place = {
+                    'name': place.get('title', ''),
+                    'address': place.get('address', ''),
+                    'phone': place.get('phoneNumber', ''),
+                    'website': place.get('website', ''),
+                    'rating': place.get('rating'),
+                    'user_ratings_total': place.get('ratingCount'),
+                    'price_level': _parse_price_level(place.get('priceRange', '')),
+                    'business_status': place.get('open', {}).get('status', 'UNKNOWN'),
+                    'types': place.get('type', '').split(', ') if place.get('type') else [],
+                    'latitude': place.get('position', {}).get('lat'),
+                    'longitude': place.get('position', {}).get('lng'),
+                    'place_id': place.get('place_id', ''),
+                    'opening_hours': place.get('hours', []),
+                    'thumbnail': place.get('imageUrl', ''),
+                    'cid': place.get('cid', ''),  # Google's internal place ID
+                    'source': 'serper.dev'
+                }
+                standardized_places.append(standardized_place)
+            
+            return {
+                'places': standardized_places,
+                'total_found': len(standardized_places),
+                'credits_used': 1,  # Serper uses 1 credit per search
+                'search_info': data.get('searchParameters', {}),
+                'error': None
+            }
+        else:
+            return {
+                'places': [],
+                'total_found': 0,
+                'credits_used': 0,
+                'error': f"API returned status {response.status_code}: {response.text}"
+            }
+            
+    except requests.exceptions.RequestException as e:
+        return {
+            'places': [],
+            'total_found': 0,
+            'credits_used': 0,
+            'error': f"Network error: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            'places': [],
+            'total_found': 0,
+            'credits_used': 0,
+            'error': f"Unexpected error: {str(e)}"
+        }
+
+def _parse_price_level(price_range: str) -> Optional[int]:
+    """
+    Convert price range string to numeric level (0-4)
+    
+    Args:
+        price_range: String like "$", "$$", "$$$", "$$$$" or descriptive text
+    
+    Returns:
+        Integer 0-4 or None if not parseable
+    """
+    if not price_range:
+        return None
+    
+    # Count dollar signs
+    dollar_count = price_range.count('$')
+    if dollar_count > 0:
+        return min(dollar_count - 1, 4)  # Convert to 0-4 scale
+    
+    # Handle descriptive text
+    price_lower = price_range.lower()
+    if 'inexpensive' in price_lower or 'cheap' in price_lower:
+        return 1
+    elif 'moderate' in price_lower:
+        return 2
+    elif 'expensive' in price_lower:
+        return 3
+    elif 'very expensive' in price_lower or 'luxury' in price_lower:
+        return 4
+    
+    return None
+
+def extract_email_from_website(website_url: str) -> Optional[str]:
+    """
+    Extract email from business website using web scraping
+    
+    Args:
+        website_url: Business website URL
+    
+    Returns:
+        Email address if found, None otherwise
+    """
+    try:
+        if not website_url or not website_url.startswith(('http://', 'https://')):
+            return None
+        
+        import re
+        response = requests.get(website_url, timeout=10, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+        
+        if response.status_code == 200:
+            # Look for email patterns in the page
+            email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+            emails = re.findall(email_pattern, response.text)
+            
+            # Filter out common non-business emails
+            filtered_emails = [
+                email for email in emails 
+                if not any(skip in email.lower() for skip in [
+                    'noreply', 'no-reply', 'donotreply', 'example.com', 
+                    'test.com', 'gmail.com', 'yahoo.com', 'hotmail.com'
+                ])
+            ]
+            
+            return filtered_emails[0] if filtered_emails else None
+            
+    except Exception:
+        return None
+    
+    return None
