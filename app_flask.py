@@ -2428,16 +2428,20 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         # Prepare CSV data
         output = io.StringIO()
         
+        # Clean keywords for filename (remove newlines and special characters)
+        clean_keywords = results['session']['keywords'].replace('\n', '_').replace('\r', '').replace(' ', '_')
+        clean_keywords = ''.join(c for c in clean_keywords if c.isalnum() or c in '_-')[:50]  # Limit length
+        
         if city_filter:
             # Single city CSV
             businesses = results['businesses_by_city'].get(city_filter, [])
-            filename = f"businesses_{results['session']['keywords']}_{city_filter}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            filename = f"businesses_{clean_keywords}_{city_filter}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         else:
             # All businesses CSV
             businesses = []
             for city_businesses in results['businesses_by_city'].values():
                 businesses.extend(city_businesses)
-            filename = f"businesses_{results['session']['keywords']}_all_cities_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            filename = f"bulk_search_{clean_keywords}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         
         if not businesses:
             flash('No businesses found to export', 'warning')
