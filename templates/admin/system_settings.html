@@ -73,6 +73,119 @@
                 </form>
             </div>
         </div>
+        
+        <!-- Blacklisted Domains Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-ban"></i> Blacklisted Domains</h5>
+            </div>
+            <div class="card-body">
+                <!-- Quick Add Single Domain -->
+                <form method="POST" action="{{ url_for('admin_system_settings') }}" class="mb-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="action" value="add_blacklist">
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control" name="domain" placeholder="example.com or https://example.com" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-plus"></i> Add to Blacklist
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <input type="text" class="form-control form-control-sm" name="reason" placeholder="Reason for blacklisting (optional)">
+                    </div>
+                </form>
+                
+                <!-- Bulk Actions -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <form method="POST" action="{{ url_for('admin_system_settings') }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input type="hidden" name="action" value="add_common_domains">
+                            <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="fas fa-magic"></i> Add Common Domains
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#bulkAddModal">
+                            <i class="fas fa-upload"></i> Bulk Import
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Current Blacklisted Domains -->
+                {% if blacklisted_domains %}
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Domain</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for domain in blacklisted_domains[:10] %}
+                            <tr>
+                                <td class="small">{{ domain.domain }}</td>
+                                <td>
+                                    {% if domain.is_active %}
+                                        <span class="badge bg-danger badge-sm">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary badge-sm">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <!-- Toggle Status -->
+                                        <form method="POST" action="{{ url_for('admin_system_settings') }}" style="display: inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <input type="hidden" name="action" value="toggle_blacklist">
+                                            <input type="hidden" name="domain_id" value="{{ domain.id }}">
+                                            <button type="submit" class="btn btn-outline-{% if domain.is_active %}secondary{% else %}success{% endif %} btn-sm"
+                                                    title="{% if domain.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                <i class="fas fa-{% if domain.is_active %}pause{% else %}play{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                        
+                                        <!-- Delete -->
+                                        <form method="POST" action="{{ url_for('admin_system_settings') }}" style="display: inline;"
+                                              onsubmit="return confirm('Delete {{ domain.domain }}?')">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <input type="hidden" name="action" value="delete_blacklist">
+                                            <input type="hidden" name="domain_id" value="{{ domain.id }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if blacklisted_domains|length > 10 %}
+                <div class="text-center mt-2">
+                    <small class="text-muted">Showing first 10 of {{ blacklisted_domains|length }} domains</small>
+                    <br>
+                    <a href="{{ url_for('admin_blacklisted_domains') }}" class="btn btn-link btn-sm">View All Domains</a>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-ban fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">No blacklisted domains yet</p>
+                    <small class="text-muted">Add domains to exclude them from search results</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
     
     <div class="col-md-4">
@@ -129,6 +242,41 @@
                     <strong>Note:</strong> Each keyword search will use approximately this many API credits.
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Add Modal -->
+<div class="modal fade" id="bulkAddModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Add Domains to Blacklist</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_system_settings') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="action" value="bulk_add_blacklist">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="domains_list" class="form-label">Domains (one per line)</label>
+                        <textarea class="form-control" id="domains_list" name="domains_list" rows="8"
+                                  placeholder="example1.com
+example2.com
+https://www.example3.com"></textarea>
+                        <div class="form-text">Enter one domain per line. URLs will be automatically cleaned.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bulk_reason" class="form-label">Reason (for all domains)</label>
+                        <input type="text" class="form-control" id="bulk_reason" name="bulk_reason" 
+                               value="Bulk import by admin" placeholder="Reason for blacklisting">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Import Domains</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

@@ -1754,42 +1754,143 @@ def create_app():
     @app.route('/admin/system-settings', methods=['GET', 'POST'])
     @admin_required
     def admin_system_settings():
-        """Admin page for configuring system-wide settings like URL limits per keyword"""
-        from models import SystemSettings
+        """Admin page for configuring system-wide settings like URL limits per keyword and blacklisted domains"""
+        from models import SystemSettings, BlacklistedDomain
+        from domain_utils import extract_main_domain, add_common_blacklist_domains
         
         if request.method == 'POST':
-            # Get form data
-            max_urls_per_keyword = int(request.form.get('max_urls_per_keyword', 2000))
-            description = request.form.get('description', 'Maximum number of URLs to scrape per keyword from Google search')
-            is_active = 'is_active' in request.form
+            action = request.form.get('action', 'save_settings')
             
-            # Validate URL limit
-            if max_urls_per_keyword < 10 or max_urls_per_keyword > 10000:
-                flash('URL limit must be between 10 and 10,000', 'error')
-                return render_template('admin/system_settings.html')
+            # Handle blacklist actions
+            if action == 'add_blacklist':
+                domain_input = request.form.get('domain', '').strip()
+                reason = request.form.get('reason', '').strip()
+                
+                if domain_input:
+                    clean_domain = extract_main_domain(domain_input)
+                    if clean_domain:
+                        existing = BlacklistedDomain.query.filter_by(domain=clean_domain).first()
+                        if not existing:
+                            blacklisted_domain = BlacklistedDomain(
+                                domain=clean_domain,
+                                reason=reason or 'Added via system settings',
+                                added_by=current_user.id,
+                                is_active=True
+                            )
+                            db.session.add(blacklisted_domain)
+                            db.session.commit()
+                            flash(f'✅ Domain "{clean_domain}" added to blacklist', 'success')
+                        else:
+                            flash(f'⚠️ Domain "{clean_domain}" is already blacklisted', 'warning')
+                    else:
+                        flash('❌ Invalid domain format', 'error')
+                return redirect(url_for('admin_system_settings'))
             
-            # Check if settings exist, update or create
-            settings = SystemSettings.query.first()
-            if settings:
-                settings.max_urls_per_keyword = max_urls_per_keyword
-                settings.description = description
-                settings.is_active = is_active
-                settings.updated_at = datetime.utcnow()
+            elif action == 'add_common_domains':
+                common_domains = add_common_blacklist_domains()
+                added_count = 0
+                
+                for domain in common_domains:
+                    existing = BlacklistedDomain.query.filter_by(domain=domain).first()
+                    if not existing:
+                        blacklisted_domain = BlacklistedDomain(
+                            domain=domain,
+                            reason="Common social media/marketplace domain",
+                            added_by=current_user.id,
+                            is_active=True
+                        )
+                        db.session.add(blacklisted_domain)
+                        added_count += 1
+                
+                db.session.commit()
+                flash(f'✅ Added {added_count} common domains to blacklist', 'success')
+                return redirect(url_for('admin_system_settings'))
+            
+            elif action == 'bulk_add_blacklist':
+                domains_text = request.form.get('domains_list', '').strip()
+                reason = request.form.get('bulk_reason', 'Bulk import via system settings')
+                
+                if domains_text:
+                    domain_lines = [line.strip() for line in domains_text.split('\n') if line.strip()]
+                    added_count = 0
+                    
+                    for domain_line in domain_lines:
+                        clean_domain = extract_main_domain(domain_line)
+                        if clean_domain:
+                            existing = BlacklistedDomain.query.filter_by(domain=clean_domain).first()
+                            if not existing:
+                                blacklisted_domain = BlacklistedDomain(
+                                    domain=clean_domain,
+                                    reason=reason,
+                                    added_by=current_user.id,
+                                    is_active=True
+                                )
+                                db.session.add(blacklisted_domain)
+                                added_count += 1
+                    
+                    db.session.commit()
+                    flash(f'✅ Added {added_count} domains to blacklist', 'success')
+                return redirect(url_for('admin_system_settings'))
+            
+            elif action == 'toggle_blacklist':
+                domain_id = request.form.get('domain_id')
+                if domain_id:
+                    domain = BlacklistedDomain.query.get(domain_id)
+                    if domain:
+                        domain.is_active = not domain.is_active
+                        db.session.commit()
+                        status = "activated" if domain.is_active else "deactivated"
+                        flash(f'✅ Domain "{domain.domain}" has been {status}', 'success')
+                return redirect(url_for('admin_system_settings'))
+            
+            elif action == 'delete_blacklist':
+                domain_id = request.form.get('domain_id')
+                if domain_id:
+                    domain = BlacklistedDomain.query.get(domain_id)
+                    if domain:
+                        domain_name = domain.domain
+                        db.session.delete(domain)
+                        db.session.commit()
+                        flash(f'✅ Domain "{domain_name}" removed from blacklist', 'success')
+                return redirect(url_for('admin_system_settings'))
+            
             else:
-                settings = SystemSettings(
-                    max_urls_per_keyword=max_urls_per_keyword,
-                    description=description,
-                    is_active=is_active
-                )
-                db.session.add(settings)
-            
-            db.session.commit()
-            flash(f'✅ System settings saved! URL limit set to {max_urls_per_keyword} per keyword.', 'success')
-            return redirect(url_for('admin_system_settings'))
+                # Handle system settings save
+                max_urls_per_keyword = int(request.form.get('max_urls_per_keyword', 2000))
+                description = request.form.get('description', 'Maximum number of URLs to scrape per keyword from Google search')
+                is_active = 'is_active' in request.form
+                
+                # Validate URL limit
+                if max_urls_per_keyword < 10 or max_urls_per_keyword > 10000:
+                    flash('URL limit must be between 10 and 10,000', 'error')
+                    return redirect(url_for('admin_system_settings'))
+                
+                # Check if settings exist, update or create
+                settings = SystemSettings.query.first()
+                if settings:
+                    settings.max_urls_per_keyword = max_urls_per_keyword
+                    settings.description = description
+                    settings.is_active = is_active
+                    settings.updated_at = datetime.utcnow()
+                else:
+                    settings = SystemSettings(
+                        max_urls_per_keyword=max_urls_per_keyword,
+                        description=description,
+                        is_active=is_active
+                    )
+                    db.session.add(settings)
+                
+                db.session.commit()
+                flash(f'✅ System settings saved! URL limit set to {max_urls_per_keyword} per keyword.', 'success')
+                return redirect(url_for('admin_system_settings'))
         
-        # GET request - show current settings
+        # GET request - show current settings and blacklisted domains
         settings = SystemSettings.query.first()
-        return render_template('admin/system_settings.html', settings=settings)
+        blacklisted_domains = BlacklistedDomain.query.order_by(BlacklistedDomain.created_at.desc()).all()
+        
+        return render_template('admin/system_settings.html', 
+                             settings=settings, 
+                             blacklisted_domains=blacklisted_domains)
     
     # Contact Form Routes
     @app.route('/contact', methods=['GET', 'POST'])
