@@ -727,17 +727,46 @@ def create_app():
     @app.route('/admin/users/<int:user_id>/coins', methods=['POST'])
     @admin_required
     def adjust_user_coins(user_id):
+        from security_utils import validate_coin_amount
+        
         user = User.query.get_or_404(user_id)
-        amount = int(request.form.get('amount'))
+        amount_str = request.form.get('amount', '').strip()
         reason = request.form.get('reason', 'Admin adjustment')
         
+        # Validate input is not empty
+        if not amount_str:
+            flash('Please enter a coin amount', 'error')
+            return redirect(url_for('admin_users'))
+        
+        try:
+            amount = int(amount_str)
+        except ValueError:
+            flash('Invalid coin amount - please enter a number', 'error')
+            return redirect(url_for('admin_users'))
+        
+        # Check for reasonable limits (admin can do more than regular validation)
+        if abs(amount) > 1000000:  # 1 million coin limit
+            flash('Amount too large - maximum 1,000,000 coins per adjustment', 'error')
+            return redirect(url_for('admin_users'))
+        
+        if amount == 0:
+            flash('Amount cannot be zero', 'error')
+            return redirect(url_for('admin_users'))
+        
+        # Check if deduction would result in negative balance
+        if amount < 0 and user.coins + amount < 0:
+            flash(f'Cannot deduct {abs(amount)} coins - user only has {user.coins} coins', 'error')
+            return redirect(url_for('admin_users'))
+        
+        # Apply the adjustment
         if amount > 0:
             user.add_coins(amount, 'admin_adjustment')
+            flash(f'Added {amount} coins to {user.email}', 'success')
         else:
             user.deduct_coins(abs(amount), 'admin_adjustment')
+            flash(f'Deducted {abs(amount)} coins from {user.email}', 'success')
         
         db.session.commit()
-        flash(f'User coins adjusted by {amount}', 'success')
         return redirect(url_for('admin_users'))
     
     @app.route('/admin/pricing')

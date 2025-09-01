@@ -135,8 +135,9 @@
                                                 </div>
                                                 <div class="mb-3">
                                                     <label for="amount{{ user.id }}" class="form-label">Amount to Add/Deduct</label>
-                                                    <input type="number" class="form-control" id="amount{{ user.id }}" name="amount" required>
-                                                    <div class="form-text">Use positive numbers to add coins, negative to deduct</div>
+                                                    <input type="number" class="form-control" id="amount{{ user.id }}" name="amount" 
+                                                           min="-1000000" max="1000000" required>
+                                                    <div class="form-text">Use positive numbers to add coins, negative to deduct (Max: ±1,000,000)</div>
                                                 </div>
                                                 <div class="mb-3">
                                                     <label for="reason{{ user.id }}" class="form-label">Reason (Optional)</label>
@@ -145,7 +146,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <button type="submit" class="btn btn-primary">Update Coins</button>
+                                                <button type="submit" class="btn btn-primary" onclick="return validateCoinAmount({{ user.id }}, {{ user.coins }})">Update Coins</button>
                                             </div>
                                         </form>
                                     </div>
@@ -251,6 +252,37 @@ function validatePassword(userId) {
     }
     
     return window.confirm('Are you sure you want to change this user\'s password?');
+}
+
+function validateCoinAmount(userId, currentCoins) {
+    const amount = parseInt(document.getElementById('amount' + userId).value);
+    
+    if (isNaN(amount)) {
+        alert('Please enter a valid number for the coin amount.');
+        return false;
+    }
+    
+    if (amount === 0) {
+        alert('Amount cannot be zero. Please enter a positive or negative number.');
+        return false;
+    }
+    
+    if (Math.abs(amount) > 1000000) {
+        alert('Amount too large. Maximum is ±1,000,000 coins per adjustment.');
+        return false;
+    }
+    
+    if (amount < 0 && currentCoins + amount < 0) {
+        alert(`Cannot deduct ${Math.abs(amount)} coins. User only has ${currentCoins} coins.`);
+        return false;
+    }
+    
+    // Show confirmation for large amounts
+    if (Math.abs(amount) > 10000) {
+        return window.confirm(`Are you sure you want to ${amount > 0 ? 'add' : 'deduct'} ${Math.abs(amount)} coins?`);
+    }
+    
+    return true;
 }
 
 function confirmDelete(userId) {
