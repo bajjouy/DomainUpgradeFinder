@@ -152,18 +152,38 @@ def create_app():
             user = User.query.filter_by(email=email).first()
             
             if user and check_password(user.password_hash, password):
-                login_user(user)
-                user.last_login = datetime.utcnow()
-                db.session.commit()
-                log_security_event('successful_login', f'User logged in: {email}', user.id)
-                
-                if user.role == UserRole.ADMIN:
-                    return redirect(url_for('admin_dashboard'))
-                else:
-                    return redirect(url_for('client_dashboard'))
+                try:
+                    login_user(user)
+                    user.last_login = datetime.utcnow()
+                    db.session.commit()
+                    
+                    # Log the successful login (with error handling)
+                    try:
+                        log_security_event('successful_login', f'User logged in: {email}', user.id)
+                    except Exception as log_error:
+                        print(f"Warning: Failed to log security event: {log_error}")
+                    
+                    # Refresh user object to avoid stale session issues
+                    db.session.refresh(user)
+                    
+                    if user.role == UserRole.ADMIN:
+                        return redirect(url_for('admin_dashboard'))
+                    else:
+                        return redirect(url_for('client_dashboard'))
+                        
+                except Exception as e:
+                    # Rollback the session if any error occurs
+                    db.session.rollback()
+                    print(f"Login error: {e}")
+                    flash('Login failed due to a system error. Please try again.', 'error')
+                    return render_template('login.html')
             else:
                 flash('Invalid email or password', 'error')
-                log_security_event('failed_login', f'Failed login attempt for email: {email}')
+                # Log failed login attempt (with error handling)
+                try:
+                    log_security_event('failed_login', f'Failed login attempt for email: {email}')
+                except Exception as log_error:
+                    print(f"Warning: Failed to log failed login event: {log_error}")
         
         return render_template('login.html')
     

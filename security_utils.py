@@ -198,6 +198,7 @@ def log_security_event(event_type: str, details: str, user_id: Optional[int] = N
     """Log security-related events"""
     from models import SystemLog, db
     from datetime import datetime
+    from sqlalchemy.exc import PendingRollbackError, OperationalError
     
     try:
         log = SystemLog()
@@ -208,5 +209,14 @@ def log_security_event(event_type: str, details: str, user_id: Optional[int] = N
         db.session.commit()
         
         logger.warning(f"Security event: {event_type} - {details}")
+    except (PendingRollbackError, OperationalError) as db_error:
+        # Handle database connection issues
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.error(f"Database error logging security event: {str(db_error)}")
+        logger.warning(f"Security event (DB failed): {event_type} - {details}")
     except Exception as e:
         logger.error(f"Failed to log security event: {str(e)}")
+        logger.warning(f"Security event (log failed): {event_type} - {details}")
