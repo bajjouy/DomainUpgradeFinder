@@ -134,7 +134,9 @@ class BusinessSearchService:
                                 business.business_status = business_data.get('business_status', '')
                                 business.latitude = business_data.get('latitude')
                                 business.longitude = business_data.get('longitude')
-                                business.place_id = business_data.get('place_id', '')
+                                # Use None instead of empty string for place_id to avoid constraint issues
+                                place_id = business_data.get('place_id', '')
+                                business.place_id = place_id if place_id else None
                                 
                                 # Set JSON fields safely
                                 try:

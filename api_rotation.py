@@ -340,8 +340,8 @@ class EnhancedDomainAnalyzer:
     
     def analyze_keywords(self, keywords_text: str, max_results: int = 10) -> Tuple[List[Dict], Optional[str]]:
         """
-        Analyze keywords and find upgrade opportunities with API rotation
-        Returns: (upgrade_opportunities, api_key_used)
+        Search keywords and return ALL search results with full data (no filtering)
+        Returns: (all_search_results, api_key_used)
         """
         start_time = time.time()
         
@@ -368,42 +368,43 @@ class EnhancedDomainAnalyzer:
             if not search_results:
                 return [], api_key_used
             
-            # Analyze each result
-            upgrade_opportunities = []
+            # Return ALL search results with full data (no filtering)
+            all_results = []
             
             for result in search_results:
                 competitor_domain = self.extract_domain_from_url(result['url'])
                 
-                if not competitor_domain:
-                    continue
+                # Check keyword match for analysis (but don't filter based on it)
+                match_result = self.check_keyword_match(keywords, competitor_domain) if competitor_domain else {
+                    'matches': [], 'match_count': 0, 'total_keywords': len(keywords), 'is_upgrade': False
+                }
                 
-                # Check keyword match
-                match_result = self.check_keyword_match(keywords, competitor_domain)
-                
-                # Only include if there are some matches (not necessarily all for upgrade)
-                if match_result['match_count'] > 0:
-                    upgrade_opportunities.append({
-                        'Keywords': keywords_text,
-                        'Competitor_Domain': competitor_domain,
-                        'Search_Keywords': ', '.join(keywords),
-                        'Matched_Keywords': ', '.join(match_result['matches']),
-                        'Match_Count': match_result['match_count'],
-                        'Total_Keywords': match_result['total_keywords'],
-                        'Is_Upgrade': match_result['is_upgrade'],
-                        'Google_Rank': result['rank'],
-                        'Competitor_Title': result['title']
-                    })
+                # Include ALL results with full data - no filtering
+                all_results.append({
+                    'Keywords': keywords_text,
+                    'Competitor_Domain': competitor_domain or 'N/A',
+                    'Competitor_URL': result['url'],
+                    'Search_Keywords': ', '.join(keywords),
+                    'Matched_Keywords': ', '.join(match_result['matches']),
+                    'Match_Count': match_result['match_count'],
+                    'Total_Keywords': match_result['total_keywords'],
+                    'Is_Upgrade': match_result['is_upgrade'],
+                    'Google_Rank': result['rank'],
+                    'Competitor_Title': result['title'],
+                    'Competitor_Description': result.get('snippet', ''),
+                    'Search_Query_Used': query
+                })
             
             # Cache the results for future use
-            if upgrade_opportunities:
+            if all_results:
                 cache_manager.search_cache.cache_search_results(
                     keywords_text, 
-                    upgrade_opportunities, 
+                    all_results, 
                     max_results
                 )
-                logger.info(f"Cache MISS: Cached new analysis for '{keywords_text[:50]}...' ({len(upgrade_opportunities)} results)")
+                logger.info(f"Cache MISS: Cached new analysis for '{keywords_text[:50]}...' ({len(all_results)} results)")
             
-            return upgrade_opportunities, api_key_used
+            return all_results, api_key_used
             
         except Exception as e:
             # Log the error
