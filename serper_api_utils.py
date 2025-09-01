@@ -112,6 +112,87 @@ def bulk_check_all_keys(api_keys: list) -> Dict:
         'live_data_available': len([k for k in key_details if k.get('is_live', False)]) > 0
     }
 
+def search_google_web_serper(api_key: str, query: str, location: str = None, num_results: int = 20) -> Dict:
+    """
+    Search Google web results and extract business data from the results
+    
+    Args:
+        api_key: Serper API key
+        query: Business search query (e.g., "restaurants", "coffee shops")
+        location: Location to search in (e.g., "New York, NY", "Los Angeles, CA") 
+        num_results: Number of results to return (default 20, max 100)
+    
+    Returns:
+        Dict with 'businesses', 'error', 'credits_used' keys
+    """
+    try:
+        url = "https://google.serper.dev/search"
+        headers = {
+            'X-API-KEY': api_key,
+            'Content-Type': 'application/json'
+        }
+        
+        # Construct search query - combine query with location
+        search_query = f"{query} in {location}" if location else query
+        
+        payload = {
+            'q': search_query,
+            'num': min(num_results, 100),  # Cap at 100 per API limits
+            'gl': 'us',  # Country code
+            'hl': 'en'   # Language
+        }
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Extract businesses from organic results
+            businesses = []
+            organic_results = data.get('organic', [])
+            
+            for result in organic_results:
+                business = _extract_business_from_search_result(result, location or '')
+                if business:
+                    businesses.append(business)
+            
+            # Also check knowledge graph for business info
+            knowledge_graph = data.get('knowledgeGraph', {})
+            if knowledge_graph and _is_business_knowledge_graph(knowledge_graph):
+                kg_business = _extract_business_from_knowledge_graph(knowledge_graph, location or '')
+                if kg_business:
+                    businesses.insert(0, kg_business)  # Put at top since it's most relevant
+            
+            return {
+                'businesses': businesses,
+                'total_found': len(businesses),
+                'credits_used': 1,  # Serper uses 1 credit per search
+                'search_info': data.get('searchParameters', {}),
+                'error': None
+            }
+        else:
+            return {
+                'businesses': [],
+                'total_found': 0,
+                'credits_used': 0,
+                'error': f"API returned status {response.status_code}: {response.text}"
+            }
+            
+    except requests.exceptions.RequestException as e:
+        return {
+            'businesses': [],
+            'total_found': 0,
+            'credits_used': 0,
+            'error': f"Network error: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            'businesses': [],
+            'total_found': 0,
+            'credits_used': 0,
+            'error': f"Unexpected error: {str(e)}"
+        }
+
 def search_places_serper(api_key: str, query: str, location: str = None, num_results: int = 20) -> Dict:
     """
     Search for businesses using Serper.dev Places API
@@ -222,6 +303,97 @@ def search_places_serper(api_key: str, query: str, location: str = None, num_res
             'credits_used': 0,
             'error': f"Unexpected error: {str(e)}"
         }
+
+def _extract_business_from_search_result(result: Dict, location: str) -> Optional[Dict]:
+    """
+    Extract business information from a Google search result
+    """
+    import re
+    
+    title = result.get('title', '')
+    snippet = result.get('snippet', '')
+    link = result.get('link', '')
+    
+    # Skip if it's not a business (filter out directories, reviews sites, etc.)
+    business_indicators = ['restaurant', 'shop', 'store', 'business', 'company', 'inc', 'llc', 'corp']
+    non_business_sites = ['yelp.com', 'facebook.com', 'linkedin.com', 'google.com', 'wikipedia.org', 'tripadvisor.com']
+    
+    # Check if it's likely a business
+    is_business = any(indicator in title.lower() or indicator in snippet.lower() for indicator in business_indicators)
+    is_directory = any(site in link.lower() for site in non_business_sites)
+    
+    if not is_business or is_directory:
+        return None
+    
+    # Extract business name (usually the first part of the title)
+    name = title.split(' - ')[0].split(' | ')[0].strip()
+    
+    # Extract phone number from snippet
+    phone_pattern = r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})'
+    phone_match = re.search(phone_pattern, snippet)
+    phone = phone_match.group(1) if phone_match else ''
+    
+    # Extract address from snippet
+    address_pattern = r'\d+\s+[\w\s,]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Place|Pl)\s*,?\s*[\w\s,]*\d{5}'
+    address_match = re.search(address_pattern, snippet, re.IGNORECASE)
+    address = address_match.group(0) if address_match else ''
+    
+    # Extract rating if present
+    rating_pattern = r'(\d+(?:\.\d+)?)\s*(?:stars?|★|out of|\/)'
+    rating_match = re.search(rating_pattern, snippet, re.IGNORECASE)
+    rating = float(rating_match.group(1)) if rating_match else None
+    
+    return {
+        'name': name,
+        'address': address,
+        'phone': phone,
+        'website': link,
+        'rating': rating,
+        'user_ratings_total': None,
+        'price_level': None,
+        'business_status': 'UNKNOWN',
+        'types': [],
+        'latitude': None,
+        'longitude': None,
+        'place_id': '',
+        'opening_hours': [],
+        'source': 'google_web_search'
+    }
+
+def _extract_business_from_knowledge_graph(kg: Dict, location: str) -> Optional[Dict]:
+    """
+    Extract business information from Google Knowledge Graph
+    """
+    if not kg.get('title'):
+        return None
+        
+    # Check for business attributes
+    attributes = kg.get('attributes', {})
+    
+    return {
+        'name': kg.get('title', ''),
+        'address': attributes.get('Address', ''),
+        'phone': attributes.get('Phone', ''),
+        'website': kg.get('website', ''),
+        'rating': None,
+        'user_ratings_total': None,
+        'price_level': None,
+        'business_status': 'UNKNOWN',
+        'types': [kg.get('type', '')] if kg.get('type') else [],
+        'latitude': None,
+        'longitude': None,
+        'place_id': '',
+        'opening_hours': [],
+        'source': 'knowledge_graph'
+    }
+
+def _is_business_knowledge_graph(kg: Dict) -> bool:
+    """
+    Check if knowledge graph represents a business
+    """
+    business_types = ['Organization', 'LocalBusiness', 'Restaurant', 'Store', 'Company']
+    kg_type = kg.get('type', '')
+    return any(btype in kg_type for btype in business_types)
 
 def _parse_price_level(price_range: str) -> Optional[int]:
     """

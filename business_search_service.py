@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from models import db, BusinessSearchSession, BusinessData, User
 from api_rotation import APIRotationManager
-from serper_api_utils import search_places_serper, extract_email_from_website
+from serper_api_utils import search_google_web_serper, extract_email_from_website
 from cache_manager import CacheManager
 import json
 import logging
@@ -333,8 +333,8 @@ class BusinessSearchService:
         api_key_value = api_key_obj.key_value
         
         try:
-            # Search using Serper.dev Places API
-            result = search_places_serper(
+            # Search using Google web search with business extraction
+            result = search_google_web_serper(
                 api_key=api_key_value,
                 query=keywords,
                 location=city,
@@ -352,7 +352,7 @@ class BusinessSearchService:
             api_key_obj.record_usage(success=True)
             db.session.commit()
             
-            businesses = result.get('places', [])
+            businesses = result.get('businesses', [])
             
             # Cache the results for 30 minutes
             cache_data = {
