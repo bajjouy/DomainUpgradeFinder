@@ -20,27 +20,57 @@
             --warning-color: #f59e0b;
             --danger-color: #ef4444;
             --info-color: #06b6d4;
-            --light-bg: #f8fafc;
-            --dark-text: #1e293b;
+            --border-radius: 8px;
+            --border-radius-lg: 12px;
+            
+            /* Light Mode Colors */
+            --bg-color: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
+            --border-light: #f1f5f9;
+            --card-bg: #ffffff;
+            --navbar-bg: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --border-radius: 8px;
-            --border-radius-lg: 12px;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Mode Colors */
+            --bg-color: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --border-light: #475569;
+            --card-bg: #1e293b;
+            --navbar-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
         }
 
         * {
             box-sizing: border-box;
         }
 
+        /* Global Transition for Smooth Theme Changes */
+        *, *::before, *::after {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
             font-size: 14px;
             line-height: 1.6;
-            color: var(--dark-text);
-            background-color: #ffffff;
+            color: var(--text-primary);
+            background-color: var(--bg-color);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -49,7 +79,7 @@
         /* Typography */
         h1, h2, h3, h4, h5, h6 {
             font-weight: 600;
-            color: var(--dark-text);
+            color: var(--text-primary);
             margin-bottom: 0.75rem;
         }
 
@@ -68,7 +98,7 @@
 
         /* Navigation */
         .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
+            background: var(--navbar-bg) !important;
             backdrop-filter: blur(10px);
             box-shadow: var(--shadow-md);
             border: none;
@@ -140,7 +170,7 @@
         /* Main Content */
         main {
             flex: 1;
-            background-color: #ffffff;
+            background-color: var(--bg-color);
         }
 
         .container {
@@ -152,8 +182,8 @@
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow-sm);
-            transition: all 0.2s ease;
-            background: white;
+            transition: all 0.2s ease, background-color 0.3s ease, border-color 0.3s ease;
+            background: var(--card-bg);
         }
 
         .card:hover {
@@ -162,11 +192,12 @@
         }
 
         .card-header {
-            background: var(--light-bg);
+            background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
             border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0 !important;
             padding: 1.25rem;
             font-weight: 600;
+            color: var(--text-primary);
         }
 
         .card-body {
@@ -240,6 +271,8 @@
             border-radius: var(--border-radius);
             padding: 0.75rem;
             font-size: 0.875rem;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
             transition: all 0.2s ease;
         }
 
@@ -250,7 +283,7 @@
 
         .form-label {
             font-weight: 500;
-            color: var(--dark-text);
+            color: var(--text-primary);
             margin-bottom: 0.5rem;
         }
 
@@ -294,14 +327,17 @@
 
         .table th {
             font-weight: 600;
-            color: var(--dark-text);
+            color: var(--text-primary);
             border-bottom: 2px solid var(--border-color);
             padding: 0.875rem;
+            background-color: var(--bg-secondary);
         }
 
         .table td {
             padding: 0.875rem;
             border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            background-color: var(--card-bg);
         }
 
         /* Badges */
@@ -318,7 +354,7 @@
         }
 
         .bg-light {
-            background-color: var(--light-bg) !important;
+            background-color: var(--bg-secondary) !important;
         }
 
         .rounded-lg {
@@ -414,13 +450,43 @@
             outline: none;
         }
 
+        /* Theme Toggle Button */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+
+        .theme-toggle i {
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover i {
+            transform: rotate(180deg);
+        }
+
         /* Professional Scrollbars */
         ::-webkit-scrollbar {
             width: 8px;
         }
 
         ::-webkit-scrollbar-track {
-            background: var(--light-bg);
+            background: var(--bg-secondary);
         }
 
         ::-webkit-scrollbar-thumb {
@@ -447,6 +513,13 @@
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="navbar-nav ms-auto">
+                    <!-- Theme Toggle Button -->
+                    <div class="nav-item me-3">
+                        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+                            <i class="fas fa-moon" id="theme-icon"></i>
+                            <span id="theme-text">Dark</span>
+                        </button>
+                    </div>
                     {% if current_user.is_authenticated %}
                         {% if current_user.role.value == 'ADMIN' %}
                             <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
@@ -528,6 +601,81 @@
     </a>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Theme Toggle Functionality
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            
+            setTheme(theme);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            const themeIcon = document.getElementById('theme-icon');
+            const themeText = document.getElementById('theme-text');
+            
+            if (theme === 'dark') {
+                themeIcon.className = 'fas fa-sun';
+                themeText.textContent = 'Light';
+            } else {
+                themeIcon.className = 'fas fa-moon';
+                themeText.textContent = 'Dark';
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
+            
+            // Listen for system theme changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                if (!localStorage.getItem('theme')) {
+                    setTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+
+            // Add smooth hover effects to cards
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+
+        // Add loading state for theme toggle
+        let isToggling = false;
+        const originalToggleTheme = toggleTheme;
+        toggleTheme = function() {
+            if (isToggling) return;
+            isToggling = true;
+            
+            const themeIcon = document.getElementById('theme-icon');
+            themeIcon.style.transform = 'rotate(180deg)';
+            
+            setTimeout(() => {
+                originalToggleTheme();
+                themeIcon.style.transform = 'rotate(0deg)';
+                isToggling = false;
+            }, 150);
+        };
+    </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>
