@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Input validation patterns
 EMAIL_PATTERN = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 DOMAIN_PATTERN = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$')
-SAFE_STRING_PATTERN = re.compile(r'^[a-zA-Z0-9\s\-_.,!?]+$')
+SAFE_STRING_PATTERN = re.compile(r'^[a-zA-Z0-9\s\-_.,!?@#$%&*+=<>(){}\[\]|\\:;"\'/~`^]+$')
 
 def validate_email(email: str) -> bool:
     """Validate email format"""
