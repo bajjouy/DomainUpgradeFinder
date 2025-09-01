@@ -152,9 +152,12 @@ class BusinessSearchService:
                         # Commit businesses for this city
                         try:
                             db.session.commit()
+                            logger.info(f"Successfully committed {len(businesses)} businesses for {city}")
                         except Exception as e:
                             logger.error(f"Error committing businesses for {city}: {str(e)}")
                             db.session.rollback()
+                            # Reset counter since businesses weren't saved
+                            total_businesses_found -= len(businesses)
                         logger.info(f"Found {len(businesses)} businesses in {city}")
                         
                         # Small delay to respect rate limits
@@ -164,18 +167,22 @@ class BusinessSearchService:
                         logger.error(f"Error processing city {city}: {str(e)}")
                         continue
                 
+                # Verify actual businesses saved before marking as completed
+                actual_count = BusinessData.query.filter_by(session_id=session_id).count()
+                logger.info(f"Verification: {actual_count} businesses actually saved vs {total_businesses_found} expected")
+                
                 # Mark session as completed
                 end_time = time.time()
                 session.status = 'completed'
                 session.progress = 100.0
-                session.total_businesses_found = total_businesses_found
+                session.total_businesses_found = actual_count  # Use actual count
                 session.processing_time = end_time - start_time
                 session.completed_at = datetime.utcnow()
                 
                 # Commit session completion separately
                 try:
                     db.session.commit()
-                    logger.info(f"Session {session_id} marked as completed successfully")
+                    logger.info(f"Session {session_id} marked as completed successfully with {actual_count} businesses")
                 except Exception as e:
                     logger.error(f"Error marking session as completed: {str(e)}")
                     db.session.rollback()
@@ -332,10 +339,12 @@ class BusinessSearchService:
         ).first()
         
         if not session:
+            logger.error(f"Session {session_id} not found for user {user_id}")
             return {'error': 'Session not found or access denied'}
         
         # Get all businesses found in this session
         businesses = BusinessData.query.filter_by(session_id=session_id).all()
+        logger.info(f"Found {len(businesses)} businesses in database for session {session_id}")
         
         # Group businesses by city
         businesses_by_city = {}
@@ -344,6 +353,9 @@ class BusinessSearchService:
             if city not in businesses_by_city:
                 businesses_by_city[city] = []
             businesses_by_city[city].append(business.to_dict())
+            
+        logger.info(f"Businesses grouped by city: {list(businesses_by_city.keys())}")
+        logger.info(f"Total businesses by city: {sum(len(city_businesses) for city_businesses in businesses_by_city.values())}")
         
         return {
             'session': {
