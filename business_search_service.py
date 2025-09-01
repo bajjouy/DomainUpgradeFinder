@@ -362,8 +362,9 @@ class BusinessSearchService:
                         'total_businesses': len(all_results)
                     })
                 
-                # Stop if we got fewer results than requested (end of results)
-                if len(page_businesses) < results_needed:
+                # Only stop if we get significantly fewer results (< 80% of expected)
+                # This allows us to continue even if Google returns slightly fewer results per page
+                if len(page_businesses) < (results_needed * 0.8):
                     logger.info(f"🏁 Reached end of results for '{keyword}' (got {len(page_businesses)}, expected {results_needed})")
                     break
                 
