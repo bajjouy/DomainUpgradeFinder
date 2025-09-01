@@ -323,6 +323,15 @@ class BusinessSearchService:
         # For large result counts, we'll need multiple requests
         total_pages = (max_results + max_per_request - 1) // max_per_request  # Ceiling division
         
+        # If we don't get enough results with basic search, try fallback strategies
+        fallback_searches = [
+            keyword,  # Original exact search
+            f"{keyword} companies",  # Add "companies" for business focus
+            f"{keyword} services",   # Add "services" for service focus
+            f"top {keyword}",        # Add "top" for ranking focus
+            f"best {keyword}",       # Add "best" for quality focus
+        ]
+        
         logger.info(f"🔍 Starting exact keyword search for '{keyword}' (target: {max_results} URLs)")
         
         try:
@@ -382,9 +391,10 @@ class BusinessSearchService:
                         'total_businesses': len(all_results)
                     })
                 
-                # Only stop if we get significantly fewer results (< 80% of expected)
-                # This allows us to continue even if Google returns slightly fewer results per page
-                if len(page_businesses) < (results_needed * 0.8):
+                # Only stop if we get significantly fewer results (< 30% of expected)
+                # This allows us to continue even if Google returns fewer results per page
+                # Lowered threshold to harvest more results before stopping
+                if len(page_businesses) < (results_needed * 0.3):
                     logger.info(f"🏁 Reached end of results for '{keyword}' (got {len(page_businesses)}, expected {results_needed})")
                     break
                 
@@ -395,6 +405,53 @@ class BusinessSearchService:
                 # Rate limiting between pages
                 import time
                 time.sleep(0.5)
+            
+            # If we still don't have enough results, try fallback searches
+            if len(all_results) < max_results * 0.7:  # Less than 70% of target
+                logger.info(f"🔄 Got {len(all_results)}/{max_results} results, trying fallback searches...")
+                
+                for fallback_query in fallback_searches[1:]:  # Skip first one as it's already done
+                    if len(all_results) >= max_results:
+                        break
+                        
+                    remaining_needed = max_results - len(all_results)
+                    logger.info(f"🔍 Fallback search: '{fallback_query}' (need {remaining_needed} more)")
+                    
+                    # Update session status
+                    if session_id in self.active_sessions:
+                        self.active_sessions[session_id].update({
+                            'current_location': f"Fallback search: '{fallback_query}' (found {len(all_results)} so far)",
+                            'total_businesses': len(all_results)
+                        })
+                    
+                    fallback_results = search_google_web_serper(
+                        api_key=api_key,
+                        query=fallback_query,
+                        location=None,
+                        num_results=min(100, remaining_needed),
+                        start=0
+                    )
+                    
+                    if not fallback_results.get('error'):
+                        new_businesses = fallback_results.get('businesses', [])
+                        
+                        # Filter out duplicates based on URL
+                        existing_urls = {b.get('URL', '') for b in all_results}
+                        unique_new = [b for b in new_businesses if b.get('URL', '') not in existing_urls]
+                        
+                        # Add rank information
+                        for i, business in enumerate(unique_new):
+                            business['Rank'] = len(all_results) + i + 1
+                            business['Keywords Found'] = fallback_query
+                            business['Search Date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            business['name'] = business.get('Title', '')
+                            business['website'] = business.get('URL', '')
+                            business['description'] = business.get('Description', '')
+                        
+                        all_results.extend(unique_new)
+                        logger.info(f"✅ Fallback '{fallback_query}': Added {len(unique_new)} unique results (Total: {len(all_results)})")
+                        
+                        time.sleep(1)  # Rate limiting between fallback searches
             
             logger.info(f"✅ Completed search for '{keyword}': {len(all_results)} total URLs found")
             return all_results
