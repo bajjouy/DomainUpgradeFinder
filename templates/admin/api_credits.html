@@ -33,41 +33,41 @@
 <!-- Credit Summary Cards -->
 <div class="row mb-4">
     <div class="col-md-3 mb-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body text-center">
-                <i class="fas fa-key fa-2x mb-2"></i>
-                <h3>{{ total_keys }}</h3>
-                <p class="mb-0">Total API Keys</p>
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <i class="fas fa-key fa-3x mb-3 opacity-75"></i>
+                <h2 class="fw-bold mb-2">{{ total_keys }}</h2>
+                <p class="mb-0 fs-5 fw-semibold">Total API Keys</p>
             </div>
         </div>
     </div>
     
     <div class="col-md-3 mb-3">
-        <div class="card bg-success text-white">
-            <div class="card-body text-center">
-                <i class="fas fa-coins fa-2x mb-2"></i>
-                <h3>{{ "{:,.0f}".format(total_remaining) }}</h3>
-                <p class="mb-0">Credits Remaining</p>
+        <div class="card bg-success text-white h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <i class="fas fa-coins fa-3x mb-3 opacity-75"></i>
+                <h2 class="fw-bold mb-2">{{ "{:,.0f}".format(total_remaining) }}</h2>
+                <p class="mb-0 fs-5 fw-semibold">Credits Remaining</p>
             </div>
         </div>
     </div>
     
     <div class="col-md-3 mb-3">
-        <div class="card bg-warning text-white">
-            <div class="card-body text-center">
-                <i class="fas fa-chart-line fa-2x mb-2"></i>
-                <h3>{{ "{:,.0f}".format(total_used) }}</h3>
-                <p class="mb-0">Credits Used</p>
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <i class="fas fa-chart-line fa-3x mb-3 opacity-75"></i>
+                <h2 class="fw-bold mb-2">{{ "{:,.0f}".format(total_used) }}</h2>
+                <p class="mb-0 fs-5 fw-semibold">Credits Used</p>
             </div>
         </div>
     </div>
     
     <div class="col-md-3 mb-3">
-        <div class="card {{ 'bg-danger' if low_credit_keys|length > 0 else 'bg-info' }} text-white">
-            <div class="card-body text-center">
-                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                <h3>{{ low_credit_keys|length }}</h3>
-                <p class="mb-0">Low Credit Alerts</p>
+        <div class="card {{ 'bg-danger' if low_credit_keys|length > 0 else 'bg-info' }} text-white h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3 opacity-75"></i>
+                <h2 class="fw-bold mb-2">{{ low_credit_keys|length }}</h2>
+                <p class="mb-0 fs-5 fw-semibold">Low Credit Alerts</p>
             </div>
         </div>
     </div>
@@ -167,63 +167,79 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+                    <table class="table table-hover table-striped">
+                        <thead class="table-dark">
                             <tr>
-                                <th>Key Name</th>
-                                <th>Status</th>
-                                <th>Credits</th>
-                                <th>Usage</th>
-                                <th>Priority Score</th>
-                                <th>Last Used</th>
-                                <th>Actions</th>
+                                <th class="fw-bold">Key Name</th>
+                                <th class="fw-bold">Status</th>
+                                <th class="fw-bold">Credits Progress</th>
+                                <th class="fw-bold">Usage Statistics</th>
+                                <th class="fw-bold">Priority Score</th>
+                                <th class="fw-bold">Last Activity</th>
+                                <th class="fw-bold">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for key in sorted_keys %}
-                            <tr class="{{ 'table-danger' if key.is_low_credits and key.status.value == 'ACTIVE' else '' }}">
+                            <tr class="{{ 'table-danger' if key.is_low_credits and key.status.value == 'ACTIVE' else '' }} align-middle">
                                 <td>
-                                    <strong>{{ key.key_name }}</strong>
-                                    {% if key.is_low_credits and key.status.value == 'ACTIVE' %}
-                                        <span class="badge bg-danger ms-2">LOW CREDITS</span>
-                                    {% endif %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="fw-bold text-primary fs-5 me-2">{{ key.key_name }}</span>
+                                        {% if key.is_low_credits and key.status.value == 'ACTIVE' %}
+                                            <span class="badge bg-danger fs-6 px-2 py-1">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>LOW CREDITS
+                                            </span>
+                                        {% endif %}
+                                    </div>
                                 </td>
                                 <td>
                                     {% if key.status.value == 'ACTIVE' %}
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="badge bg-success fs-6 px-3 py-2">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
                                     {% elif key.status.value == 'INACTIVE' %}
-                                        <span class="badge bg-secondary">Inactive</span>
+                                        <span class="badge bg-secondary fs-6 px-3 py-2">
+                                            <i class="fas fa-pause-circle me-1"></i>Inactive
+                                        </span>
                                     {% else %}
-                                        <span class="badge bg-danger">Failed</span>
+                                        <span class="badge bg-danger fs-6 px-3 py-2">
+                                            <i class="fas fa-times-circle me-1"></i>Failed
+                                        </span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div class="progress mb-1" style="height: 20px;">
-                                        <div class="progress-bar {{ 'bg-danger' if key.credits_percentage < 20 else 'bg-warning' if key.credits_percentage < 50 else 'bg-success' }}" 
+                                    <div class="progress mb-2" style="height: 25px;">
+                                        <div class="progress-bar {{ 'bg-danger' if key.credits_percentage < 20 else 'bg-warning' if key.credits_percentage < 50 else 'bg-success' }} fw-bold" 
                                              style="width: {{ key.credits_percentage }}%">
                                             {{ "%.1f"|format(key.credits_percentage) }}%
                                         </div>
                                     </div>
-                                    <small>{{ "{:,.0f}".format(key.remaining_credits) }} / {{ "{:,.0f}".format(key.total_credits) }}</small>
-                                </td>
-                                <td>
-                                    <div>
-                                        <strong>Used:</strong> {{ "{:,.0f}".format(key.credits_used) }}<br>
-                                        <strong>Errors:</strong> {{ key.error_count }}<br>
-                                        <small class="text-muted">Total requests: {{ key.usage_count }}</small>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-bold text-success">{{ "{:,.0f}".format(key.remaining_credits) }}</span>
+                                        <span class="text-secondary">of {{ "{:,.0f}".format(key.total_credits) }}</span>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info">{{ "%.0f"|format(key.priority_score) }}</span>
-                                    {% if key in sorted_keys[:3] %}
-                                        <small class="text-success d-block">High Priority</small>
-                                    {% endif %}
+                                    <div class="d-flex flex-column gap-1">
+                                        <div><span class="fw-semibold text-info">Used:</span> <span class="badge bg-info text-dark px-2">{{ "{:,.0f}".format(key.credits_used) }}</span></div>
+                                        <div><span class="fw-semibold text-danger">Errors:</span> <span class="badge bg-{{ 'danger' if key.error_count > 0 else 'success' }} px-2">{{ key.error_count }}</span></div>
+                                        <div><span class="fw-semibold text-primary">Requests:</span> <span class="badge bg-primary px-2">{{ key.usage_count }}</span></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column align-items-center">
+                                        <span class="badge bg-info fs-6 px-3 py-2 mb-1">{{ "%.0f"|format(key.priority_score) }}</span>
+                                        {% if key in sorted_keys[:3] %}
+                                            <span class="badge bg-success-subtle text-success fw-semibold">High Priority</span>
+                                        {% endif %}
+                                    </div>
                                 </td>
                                 <td>
                                     {% if key.last_used %}
-                                        <small>{{ key.last_used.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        <div class="fw-semibold">{{ key.last_used.strftime('%m/%d/%Y') }}</div>
+                                        <small class="text-secondary">{{ key.last_used.strftime('%H:%M') }}</small>
                                     {% else %}
-                                        <small class="text-muted">Never used</small>
+                                        <span class="badge bg-secondary">Never Used</span>
                                     {% endif %}
                                 </td>
                                 <td>

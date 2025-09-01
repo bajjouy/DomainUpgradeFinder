@@ -44,16 +44,22 @@
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-4">
-                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'ACTIVE')|list|length }}</h4>
-                        <small class="text-success">Active</small>
+                        <div class="d-flex flex-column align-items-center">
+                            <span class="badge bg-success fs-4 px-3 py-2 mb-2">{{ api_keys|selectattr('status.value', 'equalto', 'ACTIVE')|list|length }}</span>
+                            <span class="fw-semibold text-success">Active Keys</span>
+                        </div>
                     </div>
                     <div class="col-4">
-                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'INACTIVE')|list|length }}</h4>
-                        <small class="text-warning">Inactive</small>
+                        <div class="d-flex flex-column align-items-center">
+                            <span class="badge bg-warning fs-4 px-3 py-2 mb-2">{{ api_keys|selectattr('status.value', 'equalto', 'INACTIVE')|list|length }}</span>
+                            <span class="fw-semibold text-warning">Inactive Keys</span>
+                        </div>
                     </div>
                     <div class="col-4">
-                        <h4>{{ api_keys|selectattr('status.value', 'equalto', 'FAILED')|list|length }}</h4>
-                        <small class="text-danger">Failed</small>
+                        <div class="d-flex flex-column align-items-center">
+                            <span class="badge bg-danger fs-4 px-3 py-2 mb-2">{{ api_keys|selectattr('status.value', 'equalto', 'FAILED')|list|length }}</span>
+                            <span class="fw-semibold text-danger">Failed Keys</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -108,59 +114,69 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+                    <table class="table table-hover table-striped">
+                        <thead class="table-dark">
                             <tr>
-                                <th>Name</th>
-                                <th>API Key</th>
-                                <th>Status</th>
-                                <th>Usage</th>
-                                <th>Credits</th>
-                                <th>Errors</th>
-                                <th>Last Used</th>
-                                <th>Actions</th>
+                                <th class="fw-bold">Key Name</th>
+                                <th class="fw-bold">API Key</th>
+                                <th class="fw-bold">Status</th>
+                                <th class="fw-bold">Usage Stats</th>
+                                <th class="fw-bold">Credits</th>
+                                <th class="fw-bold">Errors</th>
+                                <th class="fw-bold">Last Used</th>
+                                <th class="fw-bold">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for key in api_keys %}
-                            <tr>
-                                <td>{{ key.key_name }}</td>
+                            <tr class="align-middle">
+                                <td class="fw-semibold text-primary">{{ key.key_name }}</td>
                                 <td>
-                                    <code class="text-muted small">{{ key.key_value[:8] }}...{{ key.key_value[-8:] }}</code>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
-                                            onclick="copyToClipboard('{{ key.key_value }}', '{{ key.key_name }}')" 
-                                            title="Copy full API key">
-                                        <i class="fas fa-copy"></i>
-                                    </button>
+                                    <div class="d-flex align-items-center">
+                                        <code class="badge bg-secondary text-light me-2 font-monospace">{{ key.key_value[:8] }}...{{ key.key_value[-8:] }}</code>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                onclick="copyToClipboard('{{ key.key_value }}', '{{ key.key_name }}')" 
+                                                title="Copy full API key">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ 'success' if key.status.value == 'ACTIVE' else 'warning' if key.status.value == 'INACTIVE' else 'danger' }}">
+                                    <span class="badge fs-6 px-3 py-2 bg-{{ 'success' if key.status.value == 'ACTIVE' else 'warning' if key.status.value == 'INACTIVE' else 'danger' }}">
+                                        <i class="fas fa-{{ 'check-circle' if key.status.value == 'ACTIVE' else 'pause-circle' if key.status.value == 'INACTIVE' else 'times-circle' }} me-1"></i>
                                         {{ key.status.value }}
                                     </span>
                                 </td>
                                 <td>
-                                    {{ key.usage_count }}
-                                    <small class="text-muted">/ {{ key.daily_limit }}</small>
+                                    <div class="fw-bold text-primary">{{ key.usage_count }}</div>
+                                    <small class="text-secondary">of {{ key.daily_limit }} daily</small>
                                 </td>
                                 <td>
                                     {% set remaining = key.total_credits - key.credits_used %}
-                                    <span class="badge bg-{{ 'success' if remaining > 1000 else 'warning' if remaining > 100 else 'danger' }}">
-                                        {{ remaining }}
-                                    </span>
-                                    <small class="text-muted">/ {{ key.total_credits }}</small>
+                                    <div class="d-flex flex-column">
+                                        <span class="badge fs-6 px-3 py-1 bg-{{ 'success' if remaining > 1000 else 'warning' if remaining > 100 else 'danger' }}">
+                                            {{ "{:,.0f}".format(remaining) }}
+                                        </span>
+                                        <small class="text-secondary mt-1">of {{ "{:,.0f}".format(key.total_credits) }} total</small>
+                                    </div>
                                 </td>
                                 <td>
                                     {% if key.error_count > 0 %}
-                                        <span class="text-danger">{{ key.error_count }}</span>
+                                        <span class="badge bg-danger fs-6 px-2 py-1">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>{{ key.error_count }}
+                                        </span>
                                     {% else %}
-                                        <span class="text-success">0</span>
+                                        <span class="badge bg-success fs-6 px-2 py-1">
+                                            <i class="fas fa-check me-1"></i>0
+                                        </span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if key.last_used %}
-                                        {{ key.last_used.strftime('%Y-%m-%d %H:%M') }}
+                                        <div class="fw-semibold">{{ key.last_used.strftime('%m/%d/%Y') }}</div>
+                                        <small class="text-secondary">{{ key.last_used.strftime('%H:%M') }}</small>
                                     {% else %}
-                                        <span class="text-muted">Never</span>
+                                        <span class="badge bg-secondary">Never Used</span>
                                     {% endif %}
                                 </td>
                                 <td>
