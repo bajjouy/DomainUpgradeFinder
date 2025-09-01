@@ -107,6 +107,7 @@
                                         </button>
                                         
                                         <form method="POST" action="{{ url_for('toggle_user_status', user_id=user.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                             <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if user.user_active else 'success' }}" 
                                                     onclick="return window.confirm('Are you sure you want to {{ 'deactivate' if user.user_active else 'activate' }} this user?')">
                                                 <i class="fas fa-{{ 'pause' if user.user_active else 'play' }}"></i> {{ 'Deactivate' if user.user_active else 'Activate' }}
@@ -171,6 +172,7 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form method="POST" action="{{ url_for('change_user_password', user_id=user.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                             <div class="modal-body">
                                                 <div class="alert alert-warning">
                                                     <i class="fas fa-exclamation-triangle"></i>
@@ -227,6 +229,7 @@
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                             <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                                 <button type="submit" class="btn btn-danger" 
                                                         onclick="return confirmDelete({{ user.id }})" disabled id="deleteBtn{{ user.id }}">
                                                     <i class="fas fa-trash"></i> DELETE USER
