@@ -204,9 +204,9 @@ class BusinessSearchService:
         """
         # Check cache first
         cache_key = f"business_search:{keywords}:{city}:{max_results}"
-        cached_result = self.cache_manager.get(
-            endpoint_name="business_search",
-            search_params={
+        cached_result = self.cache_manager.cache.get(
+            "business_search",
+            {
                 'keywords': keywords,
                 'city': city,
                 'max_results': max_results
@@ -253,14 +253,15 @@ class BusinessSearchService:
                 'search_info': result.get('search_info', {}),
                 'total_found': len(businesses)
             }
-            self.cache_manager.put(
-                endpoint_name="business_search",
-                search_params={
+            self.cache_manager.cache.set(
+                "business_search",
+                {
                     'keywords': keywords,
                     'city': city,
                     'max_results': max_results
                 },
-                search_results=cache_data
+                cache_data,
+                ttl=1800  # 30 minutes
             )
             
             logger.info(f"Found {len(businesses)} businesses for {keywords} in {city}")
