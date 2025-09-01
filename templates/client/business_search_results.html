@@ -111,17 +111,23 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <a href="{{ url_for('download_business_csv', session_id=results.session.id) }}" class="btn btn-success w-100 mb-2">
                             <i class="fas fa-download"></i> Download Complete CSV
                         </a>
                         <small class="text-muted">All businesses in one comprehensive file</small>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <button class="btn btn-outline-success w-100 mb-2" onclick="downloadKeywordCSVs()">
                             <i class="fas fa-download"></i> Download by Keyword
                         </button>
                         <small class="text-muted">Separate CSV file for each keyword</small>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-danger w-100 mb-2" onclick="deleteSearch({{ results.session.id }})">
+                            <i class="fas fa-trash"></i> Delete Search
+                        </button>
+                        <small class="text-muted">Permanently remove this search</small>
                     </div>
                 </div>
             </div>
@@ -234,6 +240,29 @@ function downloadKeywordCSVs() {
         const url = `/download-business-csv/${sessionId}?keyword=${encodeURIComponent(keyword)}`;
         window.open(url, '_blank');
     });
+}
+
+// Delete search function with confirmation
+function deleteSearch(sessionId) {
+    if (confirm('Are you sure you want to delete this search? This action cannot be undone and will permanently remove all {{ results.total_businesses }} search results.')) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete-business-search-session/' + sessionId;
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 
 // Initialize page

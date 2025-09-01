@@ -2609,6 +2609,51 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         
         return response
 
+    @app.route('/delete-business-search-session/<int:session_id>', methods=['POST'])
+    @client_required
+    def delete_business_search_session(session_id):
+        """Delete a business search session and all associated data"""
+        from models import BusinessSearchSession, BusinessData
+        
+        # Get the session - verify it belongs to current user
+        session = BusinessSearchSession.query.filter_by(
+            id=session_id, user_id=current_user.id
+        ).first()
+        
+        if not session:
+            flash('Search session not found or access denied', 'error')
+            return redirect(url_for('business_search'))
+        
+        try:
+            # Get session info for flash message
+            keywords = session.keywords
+            total_businesses = session.total_businesses_found or 0
+            
+            # Check if this is a parent session with child sessions
+            child_sessions = BusinessSearchSession.query.filter_by(parent_session_id=session_id).all()
+            
+            if child_sessions:
+                # Delete all child sessions and their business data
+                for child_session in child_sessions:
+                    BusinessData.query.filter_by(session_id=child_session.id).delete()
+                    db.session.delete(child_session)
+            
+            # Delete business data for this session
+            BusinessData.query.filter_by(session_id=session_id).delete()
+            
+            # Delete the main session
+            db.session.delete(session)
+            db.session.commit()
+            
+            flash(f'Successfully deleted search for "{keywords}" with {total_businesses} results', 'success')
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error deleting session {session_id}: {str(e)}")
+            flash('Error deleting search session. Please try again.', 'error')
+        
+        return redirect(url_for('business_search'))
+
     return app
 
 if __name__ == '__main__':
