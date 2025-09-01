@@ -112,6 +112,7 @@
                         <thead>
                             <tr>
                                 <th>Name</th>
+                                <th>API Key</th>
                                 <th>Status</th>
                                 <th>Usage</th>
                                 <th>Credits</th>
@@ -124,6 +125,14 @@
                             {% for key in api_keys %}
                             <tr>
                                 <td>{{ key.key_name }}</td>
+                                <td>
+                                    <code class="text-muted small">{{ key.key_value[:8] }}...{{ key.key_value[-8:] }}</code>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
+                                            onclick="copyToClipboard('{{ key.key_value }}', '{{ key.key_name }}')" 
+                                            title="Copy full API key">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </td>
                                 <td>
                                     <span class="badge bg-{{ 'success' if key.status.value == 'ACTIVE' else 'warning' if key.status.value == 'INACTIVE' else 'danger' }}">
                                         {{ key.status.value }}
@@ -201,6 +210,22 @@ function confirmDeleteApiKey(keyId, keyName) {
         document.body.appendChild(form);
         form.submit();
     }
+}
+
+function copyToClipboard(apiKey, keyName) {
+    navigator.clipboard.writeText(apiKey).then(function() {
+        // Show success feedback
+        alert(`✅ API key "${keyName}" copied to clipboard!`);
+    }).catch(function() {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = apiKey;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert(`✅ API key "${keyName}" copied to clipboard!`);
+    });
 }
 </script>
 {% endblock %}
