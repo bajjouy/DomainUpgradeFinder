@@ -524,6 +524,17 @@ class BusinessSearchService:
             logger.info(f"Found {len(child_sessions)} separate keyword sessions for parent session {session_id}")
             logger.info(f"Total URLs across all keywords: {total_businesses}")
             
+            # Also group all businesses by city for template compatibility
+            businesses_by_city = {}
+            all_businesses = []
+            for keyword_result in keyword_results:
+                for business in keyword_result['businesses']:
+                    all_businesses.append(business)
+                    city = business.get('city', 'Unknown')
+                    if city not in businesses_by_city:
+                        businesses_by_city[city] = []
+                    businesses_by_city[city].append(business)
+            
             return {
                 'session': {
                     'id': session.id,
@@ -537,6 +548,7 @@ class BusinessSearchService:
                 },
                 'is_bulk_search': True,
                 'keyword_results': keyword_results,
+                'businesses_by_city': businesses_by_city,  # Add this for template compatibility
                 'total_businesses': total_businesses
             }
         
