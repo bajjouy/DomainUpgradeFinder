@@ -167,7 +167,56 @@
                 {% if blacklisted_domains.pages > 1 %}
                 <div class="card-footer border-top border-secondary">
                     <nav aria-label="Domains pagination">
-                        {{ render_pagination(blacklisted_domains, 'admin_blacklisted_domains') }}
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if blacklisted_domains.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link text-white-custom bg-dark border-secondary" 
+                                       href="{{ url_for('admin_blacklisted_domains', page=blacklisted_domains.prev_num) }}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link bg-dark border-secondary">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </span>
+                                </li>
+                            {% endif %}
+
+                            {% for page in blacklisted_domains.iter_pages() %}
+                                {% if page %}
+                                    {% if page != blacklisted_domains.page %}
+                                        <li class="page-item">
+                                            <a class="page-link text-white-custom bg-dark border-secondary" 
+                                               href="{{ url_for('admin_blacklisted_domains', page=page) }}">{{ page }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link bg-primary border-primary text-white">{{ page }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link bg-dark border-secondary">…</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if blacklisted_domains.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link text-white-custom bg-dark border-secondary" 
+                                       href="{{ url_for('admin_blacklisted_domains', page=blacklisted_domains.next_num) }}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link bg-dark border-secondary">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </span>
+                                </li>
+                            {% endif %}
+                        </ul>
                     </nav>
                 </div>
                 {% endif %}
