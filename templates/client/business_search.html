@@ -5,8 +5,8 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2><i class="fas fa-search"></i> Google Business Search</h2>
-        <p class="text-muted">Search Google to find businesses and extract comprehensive data from search results. Perfect for domain upgrade outreach and lead generation.</p>
+        <h2><i class="fas fa-search"></i> Google Search</h2>
+        <p class="text-muted">Search Google for any keywords and get clean results with URLs and titles.</p>
         <hr>
     </div>
 </div>
@@ -15,7 +15,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5>Google Business Search</h5>
+                <h5>Google Search</h5>
                 <small class="text-muted">You have {{ current_user.coins }} coins available</small>
             </div>
             <div class="card-body">
@@ -23,43 +23,21 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
                     <div class="mb-3">
-                        <label for="keywords" class="form-label">Search Keywords</label>
-                        <input type="text" class="form-control" id="keywords" name="keywords" 
-                               placeholder="e.g., restaurants, plumbers, law firms, coffee shops" required>
+                        <label for="keywords" class="form-label">Search Query</label>
+                        <input type="text" class="form-control form-control-lg" id="keywords" name="keywords" 
+                               placeholder="Enter anything you want to search on Google..." required>
                         <div class="form-text">
-                            Enter business types or services you want to search for on Google
+                            Just type your search query - we'll return URLs and titles from Google results
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="cities" class="form-label">Search Locations (one per line)</label>
-                        <textarea class="form-control" id="cities" name="cities" rows="6" 
-                                placeholder="New York, NY&#10;Los Angeles, CA&#10;Chicago, IL&#10;Houston, TX&#10;Phoenix, AZ" required></textarea>
-                        <div class="form-text">
-                            Enter cities/locations to search (e.g., "Dallas, TX"). Each location costs 1 coin.
-                            <br><small class="text-info">
-                                <i class="fas fa-info-circle"></i> 
-                                <strong>Tip:</strong> Google will search for "[keywords] in [location]" for each location.
-                            </small>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="max_results" class="form-label">Search Results per Location</label>
-                        <select class="form-control" id="max_results" name="max_results">
-                            <option value="20">20 search results per location</option>
-                            <option value="50">50 search results per location</option>
-                            <option value="100" selected>100 search results per location (Recommended)</option>
-                            <option value="200">200 search results per location (Maximum Coverage)</option>
-                        </select>
-                        <div class="form-text">
-                            <strong>Higher numbers = more comprehensive Google search results!</strong> We recommend 100+ for maximum data coverage.
-                        </div>
-                    </div>
+                    <!-- Hidden fields to maintain backend compatibility -->
+                    <input type="hidden" name="cities" value="global">
+                    <input type="hidden" name="max_results" value="50">
                     
                     {% if current_user.coins > 0 %}
-                    <button type="submit" class="btn btn-success w-100" id="searchBtn">
-                        <i class="fas fa-search"></i> Start Google Search
+                    <button type="submit" class="btn btn-primary btn-lg w-100" id="searchBtn">
+                        <i class="fas fa-search"></i> Search Google
                     </button>
                     {% else %}
                     <a href="{{ url_for('buy_coins') }}" class="btn btn-warning w-100">
@@ -74,42 +52,46 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5>How Google Business Search Works</h5>
+                <h5>Simple Google Search</h5>
             </div>
             <div class="card-body">
                 <ol>
-                    <li><strong>Enter Keywords:</strong> Type business types or services to search for</li>
-                    <li><strong>List Locations:</strong> Add cities/locations to search in</li>
-                    <li><strong>AI Processing:</strong> We search Google and extract business data from results</li>
-                    <li><strong>Get Results:</strong> Download comprehensive data including:</li>
+                    <li><strong>Enter Query:</strong> Type anything you want to search</li>
+                    <li><strong>Get Results:</strong> Clean Google search results with:</li>
                 </ol>
                 
                 <ul class="list-unstyled mt-3">
-                    <li><i class="fas fa-check text-success"></i> Business names</li>
                     <li><i class="fas fa-check text-success"></i> Website URLs</li>
-                    <li><i class="fas fa-check text-success"></i> Phone numbers (when found)</li>
-                    <li><i class="fas fa-check text-success"></i> Addresses (when found)</li>
-                    <li><i class="fas fa-check text-success"></i> Email addresses (when available)</li>
-                    <li><i class="fas fa-check text-success"></i> Google search rankings</li>
-                    <li><i class="fas fa-check text-success"></i> Business descriptions</li>
+                    <li><i class="fas fa-check text-success"></i> Page titles</li>
+                    <li><i class="fas fa-check text-success"></i> Search rankings</li>
+                    <li><i class="fas fa-check text-success"></i> Page descriptions</li>
                 </ul>
+                
+                <div class="alert alert-info small">
+                    <i class="fas fa-info-circle"></i> 
+                    <strong>Focus:</strong> Results prioritize URLs and titles for easy browsing.
+                </div>
             </div>
         </div>
         
         <div class="card mt-3">
             <div class="card-header">
-                <h5>Perfect for Domain Sales</h5>
+                <h5>Example Searches</h5>
             </div>
             <div class="card-body">
                 <p class="small">
                     <i class="fas fa-lightbulb text-warning"></i> 
-                    <strong>Pro Tip:</strong> Search for businesses that match your premium domain names. 
-                    For example, if you own "BestPizza.com", search for "pizza restaurants" in major cities 
-                    to find businesses ranking on Google who could upgrade their domain.
+                    <strong>Try searching for:</strong>
                 </p>
+                <ul class="small">
+                    <li>"pizza restaurants Dallas"</li>
+                    <li>"web design companies"</li>
+                    <li>"law firms New York"</li>
+                    <li>"marketing agencies"</li>
+                </ul>
                 
                 <div class="alert alert-info small mb-0">
-                    <i class="fas fa-download"></i> All results are exported as CSV files for easy outreach management.
+                    <i class="fas fa-download"></i> Results exported as CSV with URLs and titles.
                 </div>
             </div>
         </div>

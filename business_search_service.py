@@ -108,9 +108,10 @@ class BusinessSearchService:
                         
                         db.session.commit()
                         
-                        # Search businesses in this city page by page
+                        # Handle simple Google search (no location if city is "global")
+                        search_location = None if city.lower() == "global" else city
                         businesses = self._search_businesses_paginated(
-                            session.keywords, city, session.max_results_per_city, session_id
+                            session.keywords, search_location, session.max_results_per_city, session_id
                         )
                         
                         # Save businesses page by page with real-time updates
@@ -123,38 +124,25 @@ class BusinessSearchService:
                                 business.keywords_searched = session.keywords
                                 business.city = city
                                 
-                                # Map business data
-                                business.name = business_data.get('name', '')
-                                business.address = business_data.get('address', '')
+                                # Focus on URLs and titles (simplified data)
+                                business.name = business_data.get('name', '')  # This will be the page title
+                                business.website = business_data.get('website', '')  # This will be the URL
+                                business.address = business_data.get('description', '')  # Use description field for snippet
+                                
+                                # Set minimal required fields
                                 business.phone = business_data.get('phone', '')
-                                business.website = business_data.get('website', '')
                                 business.rating = business_data.get('rating')
                                 business.user_ratings_total = business_data.get('user_ratings_total')
                                 business.price_level = business_data.get('price_level')
-                                business.business_status = business_data.get('business_status', '')
-                                business.latitude = business_data.get('latitude')
-                                business.longitude = business_data.get('longitude')
-                                # Use None instead of empty string for place_id to avoid constraint issues
-                                place_id = business_data.get('place_id', '')
-                                business.place_id = place_id if place_id else None
+                                business.business_status = 'UNKNOWN'
+                                business.latitude = None
+                                business.longitude = None
+                                business.place_id = None
+                                business.email = None
                                 
-                                # Set JSON fields safely
-                                try:
-                                    business.set_types_list(business_data.get('types', []))
-                                except:
-                                    business.types = json.dumps([])
-                                    
-                                try:
-                                    business.opening_hours = json.dumps(business_data.get('opening_hours', []))
-                                except:
-                                    business.opening_hours = json.dumps([])
-                                
-                                # Try to extract email from website
-                                try:
-                                    if business.website:
-                                        business.email = extract_email_from_website(business.website)
-                                except:
-                                    business.email = None
+                                # Set JSON fields with minimal data
+                                business.types = json.dumps([])
+                                business.opening_hours = json.dumps([])
                                 
                                 db.session.add(business)
                                 db.session.flush()  # Flush to catch errors early

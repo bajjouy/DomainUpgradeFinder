@@ -314,19 +314,17 @@ def _extract_business_from_search_result(result: Dict, location: str) -> Optiona
     snippet = result.get('snippet', '')
     link = result.get('link', '')
     
-    # Skip if it's not a business (filter out directories, reviews sites, etc.)
-    business_indicators = ['restaurant', 'shop', 'store', 'business', 'company', 'inc', 'llc', 'corp']
-    non_business_sites = ['yelp.com', 'facebook.com', 'linkedin.com', 'google.com', 'wikipedia.org', 'tripadvisor.com']
+    # Skip common non-useful sites only (keep filtering minimal)
+    non_useful_sites = ['google.com', 'youtube.com', 'facebook.com', 'wikipedia.org']
     
-    # Check if it's likely a business
-    is_business = any(indicator in title.lower() or indicator in snippet.lower() for indicator in business_indicators)
-    is_directory = any(site in link.lower() for site in non_business_sites)
+    # Only filter out obvious non-useful sites
+    is_non_useful = any(site in link.lower() for site in non_useful_sites)
     
-    if not is_business or is_directory:
+    if is_non_useful:
         return None
     
-    # Extract business name (usually the first part of the title)
-    name = title.split(' - ')[0].split(' | ')[0].strip()
+    # Keep full title as the name
+    name = title.strip()
     
     # Extract phone number from snippet
     phone_pattern = r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})'
@@ -344,11 +342,12 @@ def _extract_business_from_search_result(result: Dict, location: str) -> Optiona
     rating = float(rating_match.group(1)) if rating_match else None
     
     return {
-        'name': name,
-        'address': address,
-        'phone': phone,
-        'website': link,
-        'rating': rating,
+        'name': title,  # Full page title
+        'website': link,  # URL 
+        'description': snippet,  # Page description
+        'phone': phone,  # Optional phone if found
+        'rating': rating,  # Optional rating if found
+        'address': address,  # Optional address if found
         'user_ratings_total': None,
         'price_level': None,
         'business_status': 'UNKNOWN',
