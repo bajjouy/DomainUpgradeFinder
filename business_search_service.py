@@ -334,6 +334,11 @@ class BusinessSearchService:
         
         logger.info(f"🔍 Starting exact keyword search for '{keyword}' (target: {max_results} URLs)")
         
+        # Get blacklisted domains for filtering
+        from models import BlacklistedDomain
+        blacklisted_domains = BlacklistedDomain.get_active_domains()
+        logger.info(f"🚫 Using {len(blacklisted_domains)} blacklisted domains for filtering")
+        
         try:
             # Get API key
             api_key = get_working_serper_key()
@@ -369,9 +374,25 @@ class BusinessSearchService:
                 
                 page_businesses = search_results.get('businesses', [])
                 
-                # Add rank information and ensure consistent field names
-                for i, business in enumerate(page_businesses):
-                    business['Rank'] = start_index + i + 1  # Global rank across all pages
+                # Filter businesses by domain and blacklist before processing
+                from domain_utils import extract_main_domain
+                existing_domains = {extract_main_domain(b.get('URL', '')) for b in all_results}
+                filtered_page_businesses = []
+                
+                for business in page_businesses:
+                    domain = extract_main_domain(business.get('URL', ''))
+                    
+                    # Skip if no domain, blacklisted, or duplicate domain
+                    if not domain or domain in blacklisted_domains or domain in existing_domains:
+                        continue
+                    
+                    existing_domains.add(domain)
+                    business['main_domain'] = domain
+                    filtered_page_businesses.append(business)
+                
+                # Add rank information and ensure consistent field names for filtered results
+                for i, business in enumerate(filtered_page_businesses):
+                    business['Rank'] = len(all_results) + i + 1  # Global rank across all pages
                     business['Keywords Found'] = keyword
                     business['Search Date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     
@@ -380,7 +401,8 @@ class BusinessSearchService:
                     business['website'] = business.get('URL', '')
                     business['description'] = business.get('Description', '')
                 
-                all_results.extend(page_businesses)
+                all_results.extend(filtered_page_businesses)
+                page_businesses = filtered_page_businesses  # Update for logging
                 
                 logger.info(f"✅ Page {page}: Found {len(page_businesses)} URLs (Total: {len(all_results)}/{max_results})")
                 
@@ -435,9 +457,22 @@ class BusinessSearchService:
                     if not fallback_results.get('error'):
                         new_businesses = fallback_results.get('businesses', [])
                         
-                        # Filter out duplicates based on URL
-                        existing_urls = {b.get('URL', '') for b in all_results}
-                        unique_new = [b for b in new_businesses if b.get('URL', '') not in existing_urls]
+                        # Filter out duplicates based on main domain and apply blacklist
+                        from domain_utils import filter_unique_domains, extract_main_domain
+                        from models import BlacklistedDomain
+                        
+                        # Get existing domains and blacklisted domains
+                        existing_domains = {extract_main_domain(b.get('URL', '')) for b in all_results}
+                        blacklisted_domains = BlacklistedDomain.get_active_domains()
+                        
+                        # Filter for unique domains and non-blacklisted
+                        unique_new = []
+                        for business in new_businesses:
+                            domain = extract_main_domain(business.get('URL', ''))
+                            if domain and domain not in existing_domains and domain not in blacklisted_domains:
+                                existing_domains.add(domain)  # Add to existing set
+                                business['main_domain'] = domain
+                                unique_new.append(business)
                         
                         # Add rank information
                         for i, business in enumerate(unique_new):

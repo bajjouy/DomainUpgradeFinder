@@ -441,3 +441,34 @@ class BusinessData(db.Model):
             'Keywords Found': self.keywords_searched or '',
             'Search Date': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else ''
         }
+
+class BlacklistedDomain(db.Model):
+    __tablename__ = 'blacklisted_domains'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    domain = db.Column(db.String(255), unique=True, nullable=False)
+    reason = db.Column(db.String(500))
+    added_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    admin_user = db.relationship('User', backref='blacklisted_domains')
+    
+    def __repr__(self):
+        return f'<BlacklistedDomain {self.domain}>'
+    
+    @classmethod
+    def get_active_domains(cls):
+        """Get all active blacklisted domains as a set for fast lookup"""
+        return {domain.domain for domain in cls.query.filter_by(is_active=True).all()}
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'domain': self.domain,
+            'reason': self.reason,
+            'added_by': self.admin_user.email if self.admin_user else 'Unknown',
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else '',
+            'is_active': self.is_active
+        }

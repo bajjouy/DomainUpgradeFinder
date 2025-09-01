@@ -2097,6 +2097,178 @@ This is an automated message from Domain Upgrade Pro.
         status = "activated" if payment_method.is_active else "deactivated"
         flash(f'{payment_method.name} {status} successfully', 'success')
         return redirect(url_for('admin_payment_methods'))
+    
+    # Domain Blacklist Management Routes
+    @app.route('/admin/blacklisted-domains')
+    @admin_required
+    def admin_blacklisted_domains():
+        """Admin page for managing blacklisted domains"""
+        from models import BlacklistedDomain
+        
+        page = request.args.get('page', 1, type=int)
+        blacklisted_domains = BlacklistedDomain.query.order_by(BlacklistedDomain.created_at.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+        
+        # Get statistics
+        total_domains = BlacklistedDomain.query.count()
+        active_domains = BlacklistedDomain.query.filter_by(is_active=True).count()
+        
+        return render_template('admin/blacklisted_domains.html', 
+                             blacklisted_domains=blacklisted_domains,
+                             total_domains=total_domains,
+                             active_domains=active_domains)
+    
+    @app.route('/admin/blacklisted-domains/add', methods=['POST'])
+    @admin_required
+    def add_blacklisted_domain():
+        """Add a new domain to the blacklist"""
+        from models import BlacklistedDomain
+        from domain_utils import extract_main_domain
+        
+        domain_input = request.form.get('domain', '').strip()
+        reason = request.form.get('reason', '').strip()
+        
+        if not domain_input:
+            flash('Domain is required', 'error')
+            return redirect(url_for('admin_blacklisted_domains'))
+        
+        # Extract and clean the domain
+        clean_domain = extract_main_domain(domain_input)
+        if not clean_domain:
+            flash('Invalid domain format', 'error')
+            return redirect(url_for('admin_blacklisted_domains'))
+        
+        # Check if domain already exists
+        existing = BlacklistedDomain.query.filter_by(domain=clean_domain).first()
+        if existing:
+            flash(f'Domain "{clean_domain}" is already blacklisted', 'warning')
+            return redirect(url_for('admin_blacklisted_domains'))
+        
+        # Add the domain
+        blacklisted_domain = BlacklistedDomain(
+            domain=clean_domain,
+            reason=reason or 'Manually added by admin',
+            added_by=current_user.id,
+            is_active=True
+        )
+        
+        db.session.add(blacklisted_domain)
+        db.session.commit()
+        
+        flash(f'Domain "{clean_domain}" added to blacklist', 'success')
+        return redirect(url_for('admin_blacklisted_domains'))
+    
+    @app.route('/admin/blacklisted-domains/bulk-add', methods=['POST'])
+    @admin_required
+    def bulk_add_blacklisted_domains():
+        """Add multiple domains to the blacklist"""
+        from models import BlacklistedDomain
+        from domain_utils import extract_main_domain, add_common_blacklist_domains
+        
+        action = request.form.get('action')
+        
+        if action == 'common_domains':
+            # Add common social media and marketplace domains
+            common_domains = add_common_blacklist_domains()
+            added_count = 0
+            
+            for domain in common_domains:
+                existing = BlacklistedDomain.query.filter_by(domain=domain).first()
+                if not existing:
+                    blacklisted_domain = BlacklistedDomain(
+                        domain=domain,
+                        reason="Common social media/marketplace domain - not business focused",
+                        added_by=current_user.id,
+                        is_active=True
+                    )
+                    db.session.add(blacklisted_domain)
+                    added_count += 1
+            
+            db.session.commit()
+            flash(f'Added {added_count} common domains to blacklist', 'success')
+            
+        elif action == 'bulk_list':
+            # Add domains from textarea
+            domains_text = request.form.get('domains_list', '').strip()
+            reason = request.form.get('bulk_reason', 'Bulk import by admin')
+            
+            if not domains_text:
+                flash('Please provide a list of domains', 'error')
+                return redirect(url_for('admin_blacklisted_domains'))
+            
+            # Parse domains (one per line)
+            domain_lines = [line.strip() for line in domains_text.split('\n') if line.strip()]
+            added_count = 0
+            skipped_count = 0
+            
+            for domain_line in domain_lines:
+                clean_domain = extract_main_domain(domain_line)
+                if clean_domain:
+                    existing = BlacklistedDomain.query.filter_by(domain=clean_domain).first()
+                    if not existing:
+                        blacklisted_domain = BlacklistedDomain(
+                            domain=clean_domain,
+                            reason=reason,
+                            added_by=current_user.id,
+                            is_active=True
+                        )
+                        db.session.add(blacklisted_domain)
+                        added_count += 1
+                    else:
+                        skipped_count += 1
+            
+            db.session.commit()
+            flash(f'Added {added_count} domains to blacklist. Skipped {skipped_count} duplicates.', 'success')
+        
+        return redirect(url_for('admin_blacklisted_domains'))
+    
+    @app.route('/admin/blacklisted-domains/<int:domain_id>/toggle', methods=['POST'])
+    @admin_required
+    def toggle_blacklisted_domain(domain_id):
+        """Toggle active status of a blacklisted domain"""
+        from models import BlacklistedDomain
+        
+        domain = BlacklistedDomain.query.get_or_404(domain_id)
+        domain.is_active = not domain.is_active
+        db.session.commit()
+        
+        status = "activated" if domain.is_active else "deactivated"
+        flash(f'Domain "{domain.domain}" has been {status}', 'success')
+        return redirect(url_for('admin_blacklisted_domains'))
+    
+    @app.route('/admin/blacklisted-domains/<int:domain_id>/delete', methods=['POST'])
+    @admin_required
+    def delete_blacklisted_domain(domain_id):
+        """Permanently delete a blacklisted domain"""
+        from models import BlacklistedDomain
+        
+        domain = BlacklistedDomain.query.get_or_404(domain_id)
+        domain_name = domain.domain
+        
+        db.session.delete(domain)
+        db.session.commit()
+        
+        flash(f'Domain "{domain_name}" has been permanently removed from blacklist', 'success')
+        return redirect(url_for('admin_blacklisted_domains'))
+    
+    @app.route('/admin/blacklisted-domains/<int:domain_id>/edit', methods=['POST'])
+    @admin_required
+    def edit_blacklisted_domain(domain_id):
+        """Edit the reason for a blacklisted domain"""
+        from models import BlacklistedDomain
+        
+        domain = BlacklistedDomain.query.get_or_404(domain_id)
+        new_reason = request.form.get('reason', '').strip()
+        
+        if new_reason:
+            domain.reason = new_reason
+            db.session.commit()
+            flash(f'Updated reason for "{domain.domain}"', 'success')
+        else:
+            flash('Reason cannot be empty', 'error')
+        
+        return redirect(url_for('admin_blacklisted_domains'))
 
     # Installation Setup Wizard
     def is_installed():

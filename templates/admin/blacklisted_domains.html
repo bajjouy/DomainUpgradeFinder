@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Blacklisted Domains - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="text-white-custom mb-1">🚫 Blacklisted Domains</h2>
+                    <p class="text-gray-300 mb-0">Manage domains that should be excluded from search results</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addDomainModal">
+                        <i class="fas fa-plus me-2"></i>Add Domain
+                    </button>
+                    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#bulkAddModal">
+                        <i class="fas fa-upload me-2"></i>Bulk Add
+                    </button>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-dark-card border-secondary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="card-title text-gray-300 mb-2">Total Domains</h6>
+                                    <h3 class="text-white-custom mb-0">{{ total_domains }}</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-list-ul text-primary fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-dark-card border-secondary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="card-title text-gray-300 mb-2">Active Blacklisted</h6>
+                                    <h3 class="text-white-custom mb-0">{{ active_domains }}</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-ban text-danger fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-dark-card border-secondary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="card-title text-gray-300 mb-2">Inactive</h6>
+                                    <h3 class="text-white-custom mb-0">{{ total_domains - active_domains }}</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-pause-circle text-warning fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Domains Table -->
+            <div class="card bg-dark-card border-secondary">
+                <div class="card-header border-bottom border-secondary">
+                    <h5 class="card-title text-white-custom mb-0">
+                        <i class="fas fa-table me-2"></i>Blacklisted Domains
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if blacklisted_domains.items %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead class="table-dark-header">
+                                <tr>
+                                    <th class="text-gray-300">Domain</th>
+                                    <th class="text-gray-300">Reason</th>
+                                    <th class="text-gray-300">Added By</th>
+                                    <th class="text-gray-300">Created</th>
+                                    <th class="text-gray-300">Status</th>
+                                    <th class="text-gray-300 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for domain in blacklisted_domains.items %}
+                                <tr>
+                                    <td class="text-white-custom">
+                                        <strong>{{ domain.domain }}</strong>
+                                    </td>
+                                    <td class="text-gray-300">
+                                        <span id="reason-{{ domain.id }}">{{ domain.reason or 'No reason provided' }}</span>
+                                        <!-- Inline edit form (hidden by default) -->
+                                        <form id="edit-form-{{ domain.id }}" style="display: none;" method="POST" 
+                                              action="{{ url_for('edit_blacklisted_domain', domain_id=domain.id) }}">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control bg-dark border-secondary text-white-custom" 
+                                                       name="reason" value="{{ domain.reason or '' }}" required>
+                                                <button type="submit" class="btn btn-sm btn-success">Save</button>
+                                                <button type="button" class="btn btn-sm btn-secondary" 
+                                                        onclick="toggleEdit({{ domain.id }})">Cancel</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                    <td class="text-gray-300">{{ domain.admin_user.email if domain.admin_user else 'Unknown' }}</td>
+                                    <td class="text-gray-300">{{ domain.created_at.strftime('%Y-%m-%d %H:%M') if domain.created_at else 'Unknown' }}</td>
+                                    <td>
+                                        {% if domain.is_active %}
+                                            <span class="badge bg-danger">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <!-- Edit Reason Button -->
+                                            <button type="button" class="btn btn-outline-warning btn-sm" 
+                                                    onclick="toggleEdit({{ domain.id }})"
+                                                    title="Edit reason">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            
+                                            <!-- Toggle Status -->
+                                            <form method="POST" action="{{ url_for('toggle_blacklisted_domain', domain_id=domain.id) }}" 
+                                                  style="display: inline;">
+                                                <button type="submit" class="btn btn-outline-{% if domain.is_active %}secondary{% else %}success{% endif %} btn-sm"
+                                                        title="{% if domain.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                    <i class="fas fa-{% if domain.is_active %}pause{% else %}play{% endif %}"></i>
+                                                </button>
+                                            </form>
+                                            
+                                            <!-- Delete Button -->
+                                            <form method="POST" action="{{ url_for('delete_blacklisted_domain', domain_id=domain.id) }}" 
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Are you sure you want to permanently delete this domain from the blacklist?')">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete permanently">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-ban fa-3x text-gray-500 mb-3"></i>
+                        <h5 class="text-gray-300">No blacklisted domains found</h5>
+                        <p class="text-gray-400">Add domains to prevent them from appearing in search results</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if blacklisted_domains.pages > 1 %}
+                <div class="card-footer border-top border-secondary">
+                    <nav aria-label="Domains pagination">
+                        {{ render_pagination(blacklisted_domains, 'admin_blacklisted_domains') }}
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Domain Modal -->
+<div class="modal fade" id="addDomainModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark-card border-secondary">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-white-custom">Add Blacklisted Domain</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_blacklisted_domain') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="domain" class="form-label text-gray-300">Domain</label>
+                        <input type="text" class="form-control bg-dark border-secondary text-white-custom" 
+                               id="domain" name="domain" required
+                               placeholder="example.com or https://www.example.com">
+                        <div class="form-text text-gray-400">
+                            Enter just the domain name or full URL. We'll automatically extract the main domain.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label text-gray-300">Reason</label>
+                        <textarea class="form-control bg-dark border-secondary text-white-custom" 
+                                  id="reason" name="reason" rows="3"
+                                  placeholder="Why is this domain being blacklisted?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add to Blacklist</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Add Modal -->
+<div class="modal fade" id="bulkAddModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark-card border-secondary">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-white-custom">Bulk Add Domains</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Common Domains Option -->
+                <div class="mb-4">
+                    <h6 class="text-white-custom mb-3">Quick Add: Common Social Media & Marketplace Domains</h6>
+                    <p class="text-gray-300 mb-3">
+                        Add frequently filtered domains like Facebook, Twitter, Instagram, LinkedIn, Amazon, eBay, etc.
+                    </p>
+                    <form method="POST" action="{{ url_for('bulk_add_blacklisted_domains') }}" style="display: inline;">
+                        <input type="hidden" name="action" value="common_domains">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-magic me-2"></i>Add Common Domains
+                        </button>
+                    </form>
+                </div>
+
+                <hr class="border-secondary">
+
+                <!-- Custom List Option -->
+                <div>
+                    <h6 class="text-white-custom mb-3">Custom Domain List</h6>
+                    <form method="POST" action="{{ url_for('bulk_add_blacklisted_domains') }}">
+                        <input type="hidden" name="action" value="bulk_list">
+                        <div class="mb-3">
+                            <label for="domains_list" class="form-label text-gray-300">Domains (one per line)</label>
+                            <textarea class="form-control bg-dark border-secondary text-white-custom" 
+                                      id="domains_list" name="domains_list" rows="8"
+                                      placeholder="example1.com
+example2.com
+https://www.example3.com
+subdomain.example4.com"></textarea>
+                            <div class="form-text text-gray-400">
+                                Enter one domain per line. URLs will be automatically cleaned to extract main domains.
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bulk_reason" class="form-label text-gray-300">Reason (for all domains)</label>
+                            <input type="text" class="form-control bg-dark border-secondary text-white-custom" 
+                                   id="bulk_reason" name="bulk_reason" 
+                                   value="Bulk import by admin"
+                                   placeholder="Reason for blacklisting these domains">
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Import Domains
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleEdit(domainId) {
+    const reasonSpan = document.getElementById('reason-' + domainId);
+    const editForm = document.getElementById('edit-form-' + domainId);
+    
+    if (editForm.style.display === 'none') {
+        reasonSpan.style.display = 'none';
+        editForm.style.display = 'block';
+        editForm.querySelector('input[name="reason"]').focus();
+    } else {
+        reasonSpan.style.display = 'block';
+        editForm.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
