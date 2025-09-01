@@ -559,6 +559,24 @@
             color: var(--text-primary) !important;
         }
 
+        /* Override text-dark in dark mode */
+        [data-theme="dark"] .text-dark {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .fw-semibold {
+            color: var(--text-primary) !important;
+        }
+
+        /* Ensure badges are readable in dark mode */
+        [data-theme="dark"] .badge.bg-info {
+            color: white !important;
+        }
+
+        [data-theme="dark"] .badge.bg-warning {
+            color: #000 !important;
+        }
+
         /* Theme Toggle Button */
         .theme-toggle {
             background: rgba(255, 255, 255, 0.1);

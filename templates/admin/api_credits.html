@@ -123,7 +123,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-warning text-dark">Replace Soon</span>
+                                    <span class="badge bg-warning">Replace Soon</span>
                                     <button class="btn btn-sm btn-outline-danger ms-1" 
                                             onclick="checkLiveCredits('{{ key.key_name }}', '{{ key.id }}')">
                                         <i class="fas fa-sync-alt"></i> Check Live
@@ -221,7 +221,7 @@
                                 </td>
                                 <td>
                                     <div class="d-flex flex-column gap-1">
-                                        <div><span class="fw-semibold text-info">Used:</span> <span class="badge bg-info text-dark px-2">{{ "{:,.0f}".format(key.credits_used) }}</span></div>
+                                        <div><span class="fw-semibold text-info">Used:</span> <span class="badge bg-info px-2">{{ "{:,.0f}".format(key.credits_used) }}</span></div>
                                         <div><span class="fw-semibold text-danger">Errors:</span> <span class="badge bg-{{ 'danger' if key.error_count > 0 else 'success' }} px-2">{{ key.error_count }}</span></div>
                                         <div><span class="fw-semibold text-primary">Requests:</span> <span class="badge bg-primary px-2">{{ key.usage_count }}</span></div>
                                     </div>
