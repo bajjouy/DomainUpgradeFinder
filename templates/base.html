@@ -577,6 +577,134 @@
             color: #000 !important;
         }
 
+        /* Enhanced Clickable Visual Feedback */
+        .clickable-card {
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 12px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        }
+
+        .clickable-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+            border-width: 3px !important;
+        }
+
+        .clickable-card:active {
+            transform: translateY(-1px);
+        }
+
+        .clickable-link {
+            position: relative;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        }
+
+        .clickable-link:hover {
+            transform: translateX(3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12) !important;
+            border-width: 3px !important;
+        }
+
+        .clickable-link:active {
+            transform: translateX(1px);
+        }
+
+        /* Add pointer cursor to clickable elements */
+        .clickable-card,
+        .clickable-link {
+            cursor: pointer !important;
+        }
+
+        /* Enhanced hover glow effects */
+        .btn-outline-primary.clickable-card:hover {
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.25) !important;
+        }
+
+        .btn-outline-success.clickable-card:hover {
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.25) !important;
+        }
+
+        .btn-outline-warning.clickable-card:hover {
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25) !important;
+        }
+
+        .btn-outline-info.clickable-card:hover {
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.25) !important;
+        }
+
+        .btn-outline-danger.clickable-link:hover {
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25) !important;
+        }
+
+        .btn-outline-success.clickable-link:hover {
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25) !important;
+        }
+
+        .btn-outline-info.clickable-link:hover {
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.25) !important;
+        }
+
+        .btn-outline-dark.clickable-link:hover {
+            box-shadow: 0 4px 15px rgba(107, 114, 128, 0.25) !important;
+        }
+
+        /* Dark mode enhancements */
+        [data-theme="dark"] .clickable-card {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+        }
+
+        [data-theme="dark"] .clickable-card:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
+        }
+
+        [data-theme="dark"] .clickable-link {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+        }
+
+        [data-theme="dark"] .clickable-link:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+        }
+
+        /* API Key Status Cards */
+        .clickable-status-card {
+            transition: all 0.25s ease;
+            cursor: pointer;
+            border-radius: 8px !important;
+        }
+
+        .clickable-status-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            border-width: 3px !important;
+        }
+
+        .clickable-status-card:active {
+            transform: translateY(0px);
+        }
+
+        /* Status card specific hover effects */
+        .border-success.clickable-status-card:hover {
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25) !important;
+        }
+
+        .border-danger.clickable-status-card:hover {
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25) !important;
+        }
+
+        /* Dark mode status cards */
+        [data-theme="dark"] .clickable-status-card {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+        }
+
+        [data-theme="dark"] .clickable-status-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        }
+
         /* Theme Toggle Button */
         .theme-toggle {
             background: rgba(255, 255, 255, 0.1);
