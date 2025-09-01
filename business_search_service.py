@@ -144,10 +144,10 @@ class BusinessSearchService:
                                     business.keywords_searched = keyword
                                     business.city = city
                                     
-                                    # Focus on URLs and titles (simplified data)
-                                    business.name = business_data.get('name', '')
-                                    business.website = business_data.get('website', '')
-                                    business.address = business_data.get('description', '')
+                                    # Map from API response to database fields
+                                    business.name = business_data.get('Title', business_data.get('name', ''))  # Page title
+                                    business.website = business_data.get('URL', business_data.get('website', ''))  # URL
+                                    business.address = business_data.get('Description', business_data.get('description', ''))  # Page snippet
                                     business.phone = business_data.get('phone', '')
                                     business.rating = business_data.get('rating')
                                     business.user_ratings_total = business_data.get('user_ratings_total')
@@ -202,10 +202,10 @@ class BusinessSearchService:
                                 business.keywords_searched = business_data.get('search_keyword', session.keywords)
                                 business.city = city
                                 
-                                # Focus on URLs and titles (simplified data)
-                                business.name = business_data.get('name', '')  # This will be the page title
-                                business.website = business_data.get('website', '')  # This will be the URL
-                                business.address = business_data.get('description', '')  # Use description field for snippet
+                                # Map from API response to database fields
+                                business.name = business_data.get('Title', business_data.get('name', ''))  # Page title
+                                business.website = business_data.get('URL', business_data.get('website', ''))  # URL
+                                business.address = business_data.get('Description', business_data.get('description', ''))  # Page snippet
                                 
                                 # Set minimal required fields
                                 business.phone = business_data.get('phone', '')
@@ -352,11 +352,16 @@ class BusinessSearchService:
                 
                 page_businesses = search_results.get('businesses', [])
                 
-                # Add rank information to each result
+                # Add rank information and ensure consistent field names
                 for i, business in enumerate(page_businesses):
                     business['Rank'] = start_index + i + 1  # Global rank across all pages
                     business['Keywords Found'] = keyword
                     business['Search Date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # Ensure we have both field name formats for compatibility
+                    business['name'] = business.get('Title', '')
+                    business['website'] = business.get('URL', '')
+                    business['description'] = business.get('Description', '')
                 
                 all_results.extend(page_businesses)
                 
