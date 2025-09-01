@@ -6,29 +6,40 @@ from typing import Optional
 
 def get_working_serper_key() -> Optional[str]:
     """
-    Get a working Serper API key from environment variables or configuration
+    Get a working Serper API key using the existing API rotation system
     
     Returns:
         str: A valid Serper API key, or None if not found
     """
-    # Try to get from environment variable first
-    api_key = os.environ.get('SERPER_API_KEY')
-    if api_key:
-        return api_key
-    
-    # List of potential API keys (you can add your keys here)
-    potential_keys = [
-        # Add your Serper API keys here
-        "your_serper_api_key_here",
-    ]
-    
-    # Return the first available key (you might want to add validation logic here)
-    for key in potential_keys:
-        if key and key != "your_serper_api_key_here":
-            return key
-    
-    # If no key found, return None
-    return None
+    try:
+        # Use the existing API rotation system for best key selection
+        from api_rotation import APIRotationManager
+        from models import db
+        
+        # Initialize the API rotation manager
+        api_manager = APIRotationManager()
+        
+        # Get the API key with highest credits
+        api_key = api_manager.get_next_api_key()
+        
+        if api_key:
+            print(f"🔑 Using API key '{api_key.key_name}' with {api_key.remaining_credits} credits")
+            return api_key.key_value
+        else:
+            print("❌ No active API keys available in rotation system")
+            return None
+            
+    except Exception as e:
+        print(f"⚠️ Error accessing API rotation system: {str(e)}")
+        
+        # Fallback to environment variable
+        api_key = os.environ.get('SERPER_API_KEY')
+        if api_key:
+            print("🔄 Using fallback environment API key")
+            return api_key
+        
+        print("❌ No API keys available")
+        return None
 
 def validate_serper_key(api_key: str) -> bool:
     """
