@@ -2530,7 +2530,24 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         writer.writeheader()
         
         for business in businesses:
-            writer.writerow(business)
+            # Transform old business data format to new web search format
+            url = business.get('website', business.get('URL', ''))
+            
+            # Extract domain from URL if not already present
+            domain = business.get('Domain', '')
+            if not domain and url:
+                domain = url.replace('https://', '').replace('http://', '').split('/')[0]
+            
+            transformed_business = {
+                'Title': business.get('name', business.get('Title', '')),
+                'URL': url,
+                'Description': business.get('description', business.get('Description', '')),
+                'Domain': domain,
+                'Rank': business.get('Rank', ''),
+                'Keywords Found': business.get('Keywords Found', ''),
+                'Search Date': business.get('Search Date', '')
+            }
+            writer.writerow(transformed_business)
         
         # Prepare response
         response = make_response(output.getvalue())
