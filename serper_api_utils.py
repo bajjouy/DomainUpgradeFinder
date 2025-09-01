@@ -156,6 +156,23 @@ def search_places_serper(api_key: str, query: str, location: str = None, num_res
             # Standardize place data format
             standardized_places = []
             for place in places:
+                # Safely extract business status
+                open_info = place.get('open', {})
+                if isinstance(open_info, dict):
+                    business_status = open_info.get('status', 'UNKNOWN')
+                else:
+                    # Handle boolean or other types
+                    business_status = 'OPEN' if open_info else 'UNKNOWN'
+                
+                # Safely extract position data  
+                position_info = place.get('position', {})
+                if isinstance(position_info, dict):
+                    latitude = position_info.get('lat')
+                    longitude = position_info.get('lng')
+                else:
+                    latitude = None
+                    longitude = None
+                
                 standardized_place = {
                     'name': place.get('title', ''),
                     'address': place.get('address', ''),
@@ -164,10 +181,10 @@ def search_places_serper(api_key: str, query: str, location: str = None, num_res
                     'rating': place.get('rating'),
                     'user_ratings_total': place.get('ratingCount'),
                     'price_level': _parse_price_level(place.get('priceRange', '')),
-                    'business_status': place.get('open', {}).get('status', 'UNKNOWN'),
+                    'business_status': business_status,
                     'types': place.get('type', '').split(', ') if place.get('type') else [],
-                    'latitude': place.get('position', {}).get('lat'),
-                    'longitude': place.get('position', {}).get('lng'),
+                    'latitude': latitude,
+                    'longitude': longitude,
                     'place_id': place.get('place_id', ''),
                     'opening_hours': place.get('hours', []),
                     'thumbnail': place.get('imageUrl', ''),
