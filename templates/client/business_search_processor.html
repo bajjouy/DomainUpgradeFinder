@@ -33,7 +33,7 @@
                         <strong>Status:</strong> <span id="statusText" class="badge bg-warning">Starting...</span>
                     </div>
                     <div class="col-md-6">
-                        <strong>Current City:</strong> <span id="currentLocation" class="text-muted">-</span>
+                        <strong id="currentLocationLabel">Current City:</strong> <span id="currentLocation" class="text-muted">-</span>
                     </div>
                 </div>
                 
@@ -42,15 +42,15 @@
                         <div class="card bg-success text-white">
                             <div class="card-body text-center">
                                 <h4 id="totalBusinesses">0</h4>
-                                <small>Businesses Found</small>
+                                <small>URLs Found</small>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="card bg-info text-white">
                             <div class="card-body text-center">
-                                <h4 id="citiesProcessed">0</h4>
-                                <small>Cities Processed</small>
+                                <h4 id="keywordsProcessed">0</h4>
+                                <small id="keywordsLabel">Keywords Processed</small>
                             </div>
                         </div>
                     </div>
@@ -65,11 +65,27 @@
                     <div class="col-md-3">
                         <div class="card bg-warning text-white">
                             <div class="card-body text-center">
-                                <h4 id="averagePerCity">0</h4>
-                                <small>Avg. per City</small>
+                                <h4 id="averagePerKeyword">0</h4>
+                                <small id="averageLabel">Avg. per Keyword</small>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Keyword Progress (for bulk searches) -->
+<div class="row mb-4" id="keywordProgressSection" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-list"></i> Keyword Progress</h5>
+            </div>
+            <div class="card-body">
+                <div id="keywordProgressList">
+                    <!-- Keyword progress items will be populated here -->
                 </div>
             </div>
         </div>
@@ -178,77 +194,189 @@ function updateStatus() {
     fetch(`/api/business-search-status/${sessionId}`)
         .then(response => response.json())
         .then(data => {
-            const progress = data.progress || 0;
-            const status = data.status || 'processing';
-            const currentLocation = data.current_location || 'Starting...';
-            const totalBusinesses = data.total_businesses || 0;
-            
-            // Update progress bar
-            document.getElementById('progressBar').style.width = progress + '%';
-            document.getElementById('progressBar').textContent = Math.round(progress) + '%';
-            
-            // Update status
-            const statusBadge = document.getElementById('statusText');
-            if (status === 'completed') {
-                statusBadge.className = 'badge bg-success';
-                statusBadge.textContent = 'Completed';
-                document.getElementById('spinnerIcon').className = 'fas fa-check';
-                
-                // Show download button
-                document.getElementById('downloadSection').style.display = 'block';
-                document.getElementById('downloadBtn').href = `/business-search-results/${sessionId}`;
-                
-                clearInterval(statusInterval);
-            } else if (status === 'processing') {
-                statusBadge.className = 'badge bg-warning';
-                statusBadge.textContent = 'Processing';
-                processingStarted = true;
-            } else if (status === 'failed') {
-                statusBadge.className = 'badge bg-danger';
-                statusBadge.textContent = 'Failed';
-                document.getElementById('spinnerIcon').className = 'fas fa-exclamation-triangle';
-                clearInterval(statusInterval);
+            // Check if this is a bulk search
+            if (data.is_bulk_search) {
+                updateBulkSearchStatus(data);
+            } else {
+                updateSingleSearchStatus(data);
             }
-            
-            // Update current location
-            document.getElementById('currentLocation').textContent = currentLocation;
-            
-            // Update counters
-            document.getElementById('totalBusinesses').textContent = totalBusinesses;
-            
-            // Calculate cities processed
-            const citiesProcessed = Math.floor((progress / 100) * totalCities);
-            document.getElementById('citiesProcessed').textContent = citiesProcessed;
-            
-            // Update processing time
-            if (processingStarted) {
-                const elapsed = Math.floor((new Date().getTime() - startTime) / 1000);
-                document.getElementById('processingTime').textContent = elapsed + 's';
-            }
-            
-            // Update average per city
-            if (citiesProcessed > 0) {
-                const avgPerCity = Math.round(totalBusinesses / citiesProcessed);
-                document.getElementById('averagePerCity').textContent = avgPerCity;
-            }
-            
-            // Update city status indicators
-            cities.forEach((city, index) => {
-                const cityElement = document.getElementById(`city-${index}`);
-                if (cityElement) {
-                    if (index < citiesProcessed) {
-                        cityElement.innerHTML = '<i class="fas fa-check text-success"></i>';
-                    } else if (city === currentLocation) {
-                        cityElement.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
-                    } else {
-                        cityElement.innerHTML = '<i class="fas fa-clock text-muted"></i>';
-                    }
-                }
-            });
         })
         .catch(error => {
             console.error('Error checking status:', error);
         });
+}
+
+function updateBulkSearchStatus(data) {
+    const progress = data.progress || 0;
+    const status = data.status || 'processing';
+    const currentKeyword = data.current_keyword || 'Starting...';
+    const totalBusinesses = data.total_businesses || 0;
+    
+    // Update progress bar
+    document.getElementById('progressBar').style.width = progress + '%';
+    document.getElementById('progressBar').textContent = Math.round(progress) + '%';
+    
+    // Update status
+    const statusBadge = document.getElementById('statusText');
+    if (status === 'completed') {
+        statusBadge.className = 'badge bg-success';
+        statusBadge.textContent = 'All Keywords Completed';
+        document.getElementById('spinnerIcon').className = 'fas fa-check';
+        
+        // Show download button
+        document.getElementById('downloadSection').style.display = 'block';
+        document.getElementById('downloadBtn').href = `/business-search-results/${sessionId}`;
+        
+        clearInterval(statusInterval);
+    } else if (status === 'processing') {
+        statusBadge.className = 'badge bg-warning';
+        statusBadge.textContent = 'Processing Keywords...';
+        processingStarted = true;
+    } else if (status === 'failed') {
+        statusBadge.className = 'badge bg-danger';
+        statusBadge.textContent = 'Failed';
+        document.getElementById('spinnerIcon').className = 'fas fa-exclamation-triangle';
+        clearInterval(statusInterval);
+    }
+    
+    // Update current keyword instead of location
+    document.getElementById('currentLocationLabel').textContent = 'Current Keyword:';
+    document.getElementById('currentLocation').textContent = currentKeyword;
+    
+    // Update counters for bulk search
+    document.getElementById('totalBusinesses').textContent = totalBusinesses;
+    document.getElementById('keywordsProcessed').textContent = data.completed_keywords || 0;
+    
+    // Update processing time
+    if (processingStarted) {
+        const elapsed = Math.floor((new Date().getTime() - startTime) / 1000);
+        document.getElementById('processingTime').textContent = elapsed + 's';
+    }
+    
+    // Update average per keyword
+    if (data.completed_keywords > 0) {
+        const avgPerKeyword = Math.round(totalBusinesses / data.completed_keywords);
+        document.getElementById('averagePerKeyword').textContent = avgPerKeyword;
+    }
+    
+    // Show keyword progress section
+    const keywordSection = document.getElementById('keywordProgressSection');
+    keywordSection.style.display = 'block';
+    
+    // Update keyword progress list
+    updateKeywordProgressList(data.keyword_progress);
+}
+
+function updateSingleSearchStatus(data) {
+    const progress = data.progress || 0;
+    const status = data.status || 'processing';
+    const currentLocation = data.current_location || 'Starting...';
+    const totalBusinesses = data.total_businesses || 0;
+    
+    // Update progress bar
+    document.getElementById('progressBar').style.width = progress + '%';
+    document.getElementById('progressBar').textContent = Math.round(progress) + '%';
+    
+    // Update status
+    const statusBadge = document.getElementById('statusText');
+    if (status === 'completed') {
+        statusBadge.className = 'badge bg-success';
+        statusBadge.textContent = 'Completed';
+        document.getElementById('spinnerIcon').className = 'fas fa-check';
+        
+        // Show download button
+        document.getElementById('downloadSection').style.display = 'block';
+        document.getElementById('downloadBtn').href = `/business-search-results/${sessionId}`;
+        
+        clearInterval(statusInterval);
+    } else if (status === 'processing') {
+        statusBadge.className = 'badge bg-warning';
+        statusBadge.textContent = 'Processing';
+        processingStarted = true;
+    } else if (status === 'failed') {
+        statusBadge.className = 'badge bg-danger';
+        statusBadge.textContent = 'Failed';
+        document.getElementById('spinnerIcon').className = 'fas fa-exclamation-triangle';
+        clearInterval(statusInterval);
+    }
+    
+    // Update current location
+    document.getElementById('currentLocation').textContent = currentLocation;
+    
+    // Update counters
+    document.getElementById('totalBusinesses').textContent = totalBusinesses;
+    
+    // Calculate cities processed
+    const citiesProcessed = Math.floor((progress / 100) * totalCities);
+    document.getElementById('keywordsProcessed').textContent = citiesProcessed;
+    
+    // Update processing time
+    if (processingStarted) {
+        const elapsed = Math.floor((new Date().getTime() - startTime) / 1000);
+        document.getElementById('processingTime').textContent = elapsed + 's';
+    }
+    
+    // Update average per city
+    if (citiesProcessed > 0) {
+        const avgPerCity = Math.round(totalBusinesses / citiesProcessed);
+        document.getElementById('averagePerKeyword').textContent = avgPerCity;
+    }
+    
+    // Update city status indicators
+    cities.forEach((city, index) => {
+        const cityElement = document.getElementById(`city-${index}`);
+        if (cityElement) {
+            if (index < citiesProcessed) {
+                cityElement.innerHTML = '<i class="fas fa-check text-success"></i>';
+            } else if (city === currentLocation) {
+                cityElement.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+            } else {
+                cityElement.innerHTML = '<i class="fas fa-clock text-muted"></i>';
+            }
+        }
+    });
+}
+
+function updateKeywordProgressList(keywordProgress) {
+    const container = document.getElementById('keywordProgressList');
+    
+    if (!keywordProgress || keywordProgress.length === 0) {
+        container.innerHTML = '<p class="text-muted">No keyword progress available</p>';
+        return;
+    }
+    
+    let html = '';
+    keywordProgress.forEach(keyword => {
+        const progressClass = keyword.status === 'completed' ? 'bg-success' : 
+                            keyword.status === 'processing' ? 'bg-warning' : 'bg-secondary';
+        
+        html += `
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-4">
+                    <strong>${keyword.status_icon} ${keyword.keyword}</strong>
+                </div>
+                <div class="col-md-3">
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar ${progressClass}" 
+                             style="width: ${keyword.progress}%" 
+                             aria-valuenow="${keyword.progress}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            ${Math.round(keyword.progress)}%
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge bg-primary">${keyword.business_count} URLs</span>
+                </div>
+                <div class="col-md-2">
+                    <small class="text-muted">${keyword.status_text}</small>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
 }
 
 // Check status every 2 seconds

@@ -2377,7 +2377,7 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
     @csrf.exempt  # API endpoint
     def business_search_status(session_id):
         from business_search_service import business_search_service
-        from models import BusinessSearchSession
+        from models import BusinessSearchSession, BusinessData
         
         # Verify user owns this session
         session = BusinessSearchSession.query.filter_by(
@@ -2387,10 +2387,72 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         if not session:
             return jsonify({'error': 'Session not found'}), 404
         
-        # Get status from service
-        status = business_search_service.get_session_status(session_id)
+        # Check if this is a bulk search with child sessions
+        child_sessions = BusinessSearchSession.query.filter_by(parent_session_id=session_id).all()
         
-        return jsonify(status)
+        if child_sessions:
+            # Bulk search - return detailed keyword progress
+            keyword_progress = []
+            total_keywords = len(child_sessions)
+            completed_keywords = 0
+            current_keyword = None
+            overall_progress = 0
+            total_businesses = 0
+            
+            for child_session in child_sessions:
+                business_count = BusinessData.query.filter_by(session_id=child_session.id).count()
+                total_businesses += business_count
+                
+                if child_session.status == 'completed':
+                    completed_keywords += 1
+                    status_icon = '✅'
+                    status_text = 'Completed'
+                    progress = 100
+                elif child_session.status == 'processing':
+                    current_keyword = child_session.keywords
+                    status_icon = '🔄'
+                    status_text = f'Processing ({business_count} URLs found)'
+                    progress = child_session.progress or 0
+                else:
+                    status_icon = '⏳'
+                    status_text = 'Pending'
+                    progress = 0
+                
+                keyword_progress.append({
+                    'keyword': child_session.keywords,
+                    'status': child_session.status,
+                    'status_icon': status_icon,
+                    'status_text': status_text,
+                    'progress': progress,
+                    'business_count': business_count,
+                    'processing_time': child_session.processing_time or 0
+                })
+            
+            # Calculate overall progress
+            overall_progress = (completed_keywords / total_keywords * 100) if total_keywords > 0 else 0
+            if current_keyword:
+                # Add partial progress for current keyword
+                current_session = next((s for s in child_sessions if s.keywords == current_keyword), None)
+                if current_session and current_session.progress:
+                    overall_progress += (current_session.progress / total_keywords)
+            
+            return jsonify({
+                'status': session.status,
+                'is_bulk_search': True,
+                'total_keywords': total_keywords,
+                'completed_keywords': completed_keywords,
+                'current_keyword': current_keyword,
+                'progress': min(100, overall_progress),
+                'keyword_progress': keyword_progress,
+                'total_businesses': total_businesses,
+                'processing_time': session.processing_time or 0
+            })
+        
+        else:
+            # Single search - get status from service
+            status = business_search_service.get_session_status(session_id)
+            status['is_bulk_search'] = False
+            return jsonify(status)
     
     @app.route('/business-search-results/<int:session_id>')
     @client_required
