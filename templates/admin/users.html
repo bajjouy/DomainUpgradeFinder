@@ -98,7 +98,7 @@
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#adjustCoinsModal{{ user.id }}">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="toggleCoinForm({{ user.id }})">
                                             <i class="fas fa-coins"></i> Coins
                                         </button>
                                         
@@ -120,40 +120,47 @@
                                 </td>
                             </tr>
                             
-                            <!-- Adjust Coins Modal -->
-                            <div class="modal fade" id="adjustCoinsModal{{ user.id }}" tabindex="-1" 
-                                 data-bs-backdrop="true" data-bs-keyboard="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Adjust Coins for {{ user.email }}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <!-- Inline Coin Adjustment Form -->
+                            <tr id="coinForm{{ user.id }}" style="display: none;">
+                                <td colspan="7">
+                                    <div class="card bg-light">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">Adjust Coins for {{ user.email }}</h6>
                                         </div>
-                                        <form method="POST" action="{{ url_for('adjust_user_coins', user_id=user.id) }}">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                            <div class="modal-body">
-                                                <div class="mb-3">
-                                                    <label class="form-label">Current Balance: <strong>{{ user.coins }} coins</strong></label>
+                                        <div class="card-body">
+                                            <form method="POST" action="{{ url_for('adjust_user_coins', user_id=user.id) }}" class="row align-items-end">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                
+                                                <div class="col-md-2">
+                                                    <label class="form-label small">Current Balance</label>
+                                                    <div class="fw-bold">{{ user.coins }} coins</div>
                                                 </div>
-                                                <div class="mb-3">
-                                                    <label for="amount{{ user.id }}" class="form-label">Amount to Add/Deduct</label>
-                                                    <input type="number" class="form-control" id="amount{{ user.id }}" name="amount" 
+                                                
+                                                <div class="col-md-3">
+                                                    <label for="amount{{ user.id }}" class="form-label small">Amount to Add/Deduct</label>
+                                                    <input type="number" class="form-control form-control-sm" id="amount{{ user.id }}" name="amount" 
                                                            min="-1000000" max="1000000" step="1" autocomplete="off" required>
-                                                    <div class="form-text">Use positive numbers to add coins, negative to deduct (Max: ±1,000,000)</div>
+                                                    <div class="form-text">+/- (Max: ±1,000,000)</div>
                                                 </div>
-                                                <div class="mb-3">
-                                                    <label for="reason{{ user.id }}" class="form-label">Reason (Optional)</label>
-                                                    <input type="text" class="form-control" id="reason{{ user.id }}" name="reason" placeholder="Admin adjustment">
+                                                
+                                                <div class="col-md-4">
+                                                    <label for="reason{{ user.id }}" class="form-label small">Reason (Optional)</label>
+                                                    <input type="text" class="form-control form-control-sm" id="reason{{ user.id }}" name="reason" placeholder="Admin adjustment">
                                                 </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <button type="submit" class="btn btn-primary" onclick="return validateCoinAmount({{ user.id }}, {{ user.coins }})">Update Coins</button>
-                                            </div>
-                                        </form>
+                                                
+                                                <div class="col-md-3">
+                                                    <button type="submit" class="btn btn-primary btn-sm me-2" onclick="return validateCoinAmount({{ user.id }}, {{ user.coins }})">
+                                                        <i class="fas fa-check"></i> Update
+                                                    </button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCoinForm({{ user.id }})">
+                                                        <i class="fas fa-times"></i> Cancel
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                </td>
+                            </tr>
                             
                             <!-- Change Password Modal -->
                             <div class="modal fade" id="changePasswordModal{{ user.id }}" tabindex="-1">
@@ -256,6 +263,20 @@ function validatePassword(userId) {
     return window.confirm('Are you sure you want to change this user\'s password?');
 }
 
+function toggleCoinForm(userId) {
+    const form = document.getElementById('coinForm' + userId);
+    if (form.style.display === 'none') {
+        form.style.display = 'table-row';
+        setTimeout(() => {
+            document.getElementById('amount' + userId).focus();
+        }, 100);
+    } else {
+        form.style.display = 'none';
+        document.getElementById('amount' + userId).value = '';
+        document.getElementById('reason' + userId).value = '';
+    }
+}
+
 function validateCoinAmount(userId, currentCoins) {
     const amount = parseInt(document.getElementById('amount' + userId).value);
     
@@ -313,11 +334,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Focus on amount input when coin modal opens
-    document.getElementById('adjustCoinsModal{{ user.id }}').addEventListener('shown.bs.modal', function () {
-        document.getElementById('amount{{ user.id }}').focus();
-        document.getElementById('amount{{ user.id }}').select();
-    });
     {% endfor %}
 });
 </script>
