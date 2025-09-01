@@ -118,10 +118,10 @@
                         <small class="text-muted">All businesses in one comprehensive file</small>
                     </div>
                     <div class="col-md-6">
-                        <button class="btn btn-outline-success w-100 mb-2" onclick="downloadCityCSVs()">
-                            <i class="fas fa-download"></i> Download by City
+                        <button class="btn btn-outline-success w-100 mb-2" onclick="downloadKeywordCSVs()">
+                            <i class="fas fa-download"></i> Download by Keyword
                         </button>
-                        <small class="text-muted">Separate CSV file for each city</small>
+                        <small class="text-muted">Separate CSV file for each keyword</small>
                     </div>
                 </div>
             </div>
@@ -129,106 +129,52 @@
     </div>
 </div>
 
-<!-- Results by City -->
+<!-- Results by Keyword -->
 <div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-city"></i> Results by City</h5>
+                <h5><i class="fas fa-search"></i> Search Results</h5>
             </div>
             <div class="card-body">
-                <!-- City Tabs -->
-                <ul class="nav nav-tabs" id="cityTabs" role="tablist">
-                    {% for city, businesses in results.businesses_by_city.items() %}
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link {% if loop.first %}active{% endif %}" 
-                                id="tab-{{ loop.index0 }}" data-bs-toggle="tab" 
-                                data-bs-target="#city-{{ loop.index0 }}" type="button" role="tab">
-                            {{ city }} <span class="badge bg-secondary ms-1">{{ businesses|length }}</span>
-                        </button>
-                    </li>
-                    {% endfor %}
-                </ul>
-                
-                <!-- City Content -->
-                <div class="tab-content" id="cityTabsContent">
-                    {% for city, businesses in results.businesses_by_city.items() %}
-                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
-                         id="city-{{ loop.index0 }}" role="tabpanel">
-                        
-                        <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
-                            <h6>{{ businesses|length }} businesses found in {{ city }}</h6>
-                            <a href="{{ url_for('download_business_csv', session_id=results.session.id, city=city) }}" 
-                               class="btn btn-sm btn-outline-success">
-                                <i class="fas fa-download"></i> Download {{ city }} CSV
-                            </a>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Business Name</th>
-                                        <th>Address</th>
-                                        <th>Contact</th>
-                                        <th>Rating</th>
-                                        <th>Website</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for business in businesses %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ business['Business Name'] }}</strong>
-                                            {% if business['Business Types'] %}
-                                                <br><small class="text-muted">{{ business['Business Types'][:50] }}{% if business['Business Types']|length > 50 %}...{% endif %}</small>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <small>{{ business['Address'] }}</small>
-                                            {% if business['Latitude'] and business['Longitude'] %}
-                                                <br><a href="https://www.google.com/maps/@{{ business['Latitude'] }},{{ business['Longitude'] }},15z" 
-                                                       target="_blank" class="text-primary">
-                                                    <i class="fas fa-map-marker-alt"></i> View on Maps
-                                                </a>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if business['Phone'] %}
-                                                <div><i class="fas fa-phone"></i> {{ business['Phone'] }}</div>
-                                            {% endif %}
-                                            {% if business['Email'] and business['Email'] != 'Not available' %}
-                                                <div><i class="fas fa-envelope"></i> {{ business['Email'] }}</div>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if business['Rating'] %}
-                                                <div>
-                                                    <span class="badge bg-warning">{{ business['Rating'] }}★</span>
-                                                    {% if business['Total Reviews'] %}
-                                                        <br><small>({{ business['Total Reviews'] }} reviews)</small>
-                                                    {% endif %}
-                                                </div>
-                                            {% else %}
-                                                <span class="text-muted">No rating</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if business['Website'] %}
-                                                <a href="{{ business['Website'] }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-external-link-alt"></i> Visit
-                                                </a>
-                                            {% else %}
-                                                <span class="text-muted">No website</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    {% endfor %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Website Title</th>
+                                <th>URL</th>
+                                <th>Keyword</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for keyword_result in results.keyword_results %}
+                                {% for business in keyword_result.businesses[:50] %}
+                                <tr>
+                                    <td><span class="badge bg-secondary">{{ business.rank if business.rank else loop.index }}</span></td>
+                                    <td>
+                                        <strong>{{ business.title if business.title else 'No Title' }}</strong>
+                                        {% if business.snippet %}
+                                            <br><small class="text-muted">{{ business.snippet[:100] }}{% if business.snippet|length > 100 %}...{% endif %}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ business.url }}" target="_blank" class="text-primary" title="{{ business.url }}">
+                                            {{ business.url[:50] }}{% if business.url|length > 50 %}...{% endif %}
+                                        </a>
+                                    </td>
+                                    <td><span class="badge bg-info">{{ keyword_result.keyword }}</span></td>
+                                    <td>
+                                        <a href="{{ business.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt"></i> Visit
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -248,17 +194,18 @@
                         <strong>Search Details:</strong>
                         <ul>
                             <li><strong>Keywords:</strong> {{ results.session.keywords }}</li>
-                            <li><strong>Cities:</strong> {{ ", ".join(results.session.cities) }}</li>
+                            <li><strong>Search Type:</strong> Exact keyword web search</li>
                             <li><strong>Search Date:</strong> {{ results.session.created_at }}</li>
                             <li><strong>Processing Time:</strong> {{ "%.2f"|format(results.session.processing_time or 0) }} seconds</li>
                         </ul>
                     </div>
                     <div class="col-md-6">
-                        <strong>Data Quality:</strong>
+                        <strong>Search Coverage:</strong>
                         <ul>
-                            <li><strong>Businesses with Phone:</strong> {{ results.businesses_by_city.values() | list | sum(start=[]) | selectattr('phone') | list | length }} / {{ results.total_businesses }}</li>
-                            <li><strong>Businesses with Website:</strong> {{ results.businesses_by_city.values() | list | sum(start=[]) | selectattr('website') | list | length }} / {{ results.total_businesses }}</li>
-                            <li><strong>Businesses with Ratings:</strong> {{ results.businesses_by_city.values() | list | sum(start=[]) | selectattr('rating') | list | length }} / {{ results.total_businesses }}</li>
+                            <li><strong>Total URLs Found:</strong> {{ results.total_businesses }}</li>
+                            <li><strong>Keywords Searched:</strong> {{ results.keyword_results|length }}</li>
+                            <li><strong>Search Engine:</strong> Google Web Search</li>
+                            <li><strong>Result Type:</strong> URLs and Page Titles</li>
                         </ul>
                     </div>
                 </div>
@@ -271,7 +218,7 @@
 <div class="row mt-4">
     <div class="col-12 text-center">
         <a href="{{ url_for('business_search') }}" class="btn btn-primary">
-            <i class="fas fa-search"></i> Start New Business Search
+            <i class="fas fa-search"></i> Start New Keyword Search
         </a>
     </div>
 </div>
@@ -279,25 +226,19 @@
 
 {% block scripts %}
 <script>
-function downloadCityCSVs() {
-    const cities = {{ results.session.cities | tojson }};
+function downloadKeywordCSVs() {
+    const keywords = {{ results.keyword_results | map(attribute='keyword') | list | tojson }};
     const sessionId = {{ results.session.id }};
     
-    cities.forEach(city => {
-        const url = `/download-business-csv/${sessionId}?city=${encodeURIComponent(city)}`;
+    keywords.forEach(keyword => {
+        const url = `/download-business-csv/${sessionId}?keyword=${encodeURIComponent(keyword)}`;
         window.open(url, '_blank');
     });
 }
 
-// Initialize Bootstrap tabs
+// Initialize page
 document.addEventListener('DOMContentLoaded', function() {
-    const cityTabs = document.querySelector('#cityTabs');
-    if (cityTabs) {
-        const triggerTabList = [].slice.call(document.querySelectorAll('#cityTabs button'));
-        triggerTabList.forEach(function (triggerEl) {
-            const tabTrigger = new bootstrap.Tab(triggerEl);
-        });
-    }
+    console.log('Keyword search results page loaded');
 });
 </script>
 {% endblock %}

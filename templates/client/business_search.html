@@ -114,9 +114,8 @@
                         <thead>
                             <tr>
                                 <th>Keywords</th>
-                                <th>Cities</th>
                                 <th>Status</th>
-                                <th>Businesses Found</th>
+                                <th>URLs Found</th>
                                 <th>Date</th>
                                 <th>Actions</th>
                             </tr>
@@ -125,16 +124,6 @@
                             {% for search in recent_searches %}
                             <tr>
                                 <td><strong>{{ search.keywords }}</strong></td>
-                                <td>
-                                    <small>
-                                        {% for city in search.get_cities_list()[:3] %}
-                                            {{ city }}{% if not loop.last %}, {% endif %}
-                                        {% endfor %}
-                                        {% if search.get_cities_list()|length > 3 %}
-                                            <span class="text-muted">... +{{ search.get_cities_list()|length - 3 }} more</span>
-                                        {% endif %}
-                                    </small>
-                                </td>
                                 <td>
                                     {% if search.status == 'completed' %}
                                         <span class="badge bg-success">Completed</span>
@@ -183,22 +172,21 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     const submitBtn = document.getElementById('searchBtn');
-    const citiesTextarea = document.getElementById('cities');
     
-    // Dynamic coin calculation
+    // Dynamic coin calculation based on keywords
     function updateCoinEstimate() {
-        const citiesText = citiesTextarea.value.trim();
-        if (citiesText) {
-            const cities = citiesText.split('\n').filter(city => city.trim().length > 0);
-            const coinCost = cities.length;
+        const keywordsText = document.getElementById('keywords').value.trim();
+        if (keywordsText) {
+            const keywords = keywordsText.split('\n').filter(keyword => keyword.trim().length > 0);
+            const coinCost = keywords.length;
             
-            if (cities.length > 0) {
+            if (keywords.length > 0) {
                 submitBtn.innerHTML = `<i class="fas fa-search"></i> Start Search (${coinCost} coin${coinCost > 1 ? 's' : ''})`;
             }
         }
     }
     
-    citiesTextarea.addEventListener('input', updateCoinEstimate);
+    document.getElementById('keywords').addEventListener('input', updateCoinEstimate);
     updateCoinEstimate(); // Initial calculation
 });
 </script>

@@ -5,8 +5,8 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2><i class="fas fa-cogs"></i> Business Search Processing</h2>
-        <p class="text-muted">Searching for "<strong>{{ session.keywords }}</strong>" businesses across {{ session.get_cities_list()|length }} cities using Google Maps data.</p>
+        <h2><i class="fas fa-cogs"></i> Keyword Search Processing</h2>
+        <p class="text-muted">Searching for "<strong>{{ session.keywords }}</strong>" keywords using Google Web Search to find maximum URLs and page titles.</p>
         <hr>
     </div>
 </div>
@@ -33,7 +33,7 @@
                         <strong>Status:</strong> <span id="statusText" class="badge bg-warning">Starting...</span>
                     </div>
                     <div class="col-md-6">
-                        <strong id="currentLocationLabel">Current City:</strong> <span id="currentLocation" class="text-muted">-</span>
+                        <strong id="currentLocationLabel">Current Keyword:</strong> <span id="currentLocation" class="text-muted">-</span>
                     </div>
                 </div>
                 
@@ -66,7 +66,7 @@
                         <div class="card bg-warning text-white">
                             <div class="card-body text-center">
                                 <h4 id="averagePerKeyword">0</h4>
-                                <small id="averageLabel">Avg. per Keyword</small>
+                                <small id="averageLabel">Avg. URLs per Keyword</small>
                             </div>
                         </div>
                     </div>
@@ -104,23 +104,25 @@
                     <h6><i class="fas fa-search"></i> Search Configuration</h6>
                     <ul class="mb-0">
                         <li><strong>Keywords:</strong> {{ session.keywords }}</li>
-                        <li><strong>Cities:</strong> {{ session.get_cities_list()|length }} locations</li>
-                        <li><strong>Max Results per City:</strong> {{ session.max_results_per_city }}</li>
-                        <li><strong>Expected Total:</strong> Up to {{ session.get_cities_list()|length * session.max_results_per_city }} businesses</li>
+                        <li><strong>Search Type:</strong> Google Web Search</li>
+                        <li><strong>Max URLs per Keyword:</strong> {{ session.max_results_per_city }}</li>
+                        <li><strong>Expected Total:</strong> Up to {{ (session.keywords.split('\n')|length) * session.max_results_per_city }} URLs</li>
                     </ul>
                 </div>
                 
-                <h6>Cities to Process:</h6>
+                <h6>Keywords to Process:</h6>
                 <div class="row">
-                    {% for city in session.get_cities_list() %}
+                    {% for keyword in session.keywords.split('\n') %}
+                    {% if keyword.strip() %}
                     <div class="col-md-6">
                         <div class="d-flex align-items-center mb-2">
-                            <span class="city-status" data-city="{{ city }}" id="city-{{ loop.index0 }}">
+                            <span class="keyword-status" data-keyword="{{ keyword.strip() }}" id="keyword-{{ loop.index0 }}">
                                 <i class="fas fa-clock text-muted"></i>
                             </span>
-                            <span class="ms-2">{{ city }}</span>
+                            <span class="ms-2">{{ keyword.strip() }}</span>
                         </div>
                     </div>
+                    {% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -136,22 +138,22 @@
                 <div class="alert alert-success">
                     <h6>What We're Collecting:</h6>
                     <ul class="small mb-0">
-                        <li>Business names & addresses</li>
-                        <li>Phone numbers & websites</li>
-                        <li>Email addresses (when available)</li>
-                        <li>Google ratings & review counts</li>
-                        <li>GPS coordinates</li>
-                        <li>Business categories & price levels</li>
+                        <li>Website URLs</li>
+                        <li>Page titles</li>
+                        <li>Search rankings</li>
+                        <li>Page snippets</li>
+                        <li>Exact keyword matches</li>
+                        <li>All available Google results</li>
                     </ul>
                 </div>
                 
                 <div class="alert alert-warning">
                     <h6><i class="fas fa-bolt"></i> Powered by:</h6>
                     <ul class="small mb-0">
-                        <li>Google Maps Places API via Serper.dev</li>
+                        <li>Google Web Search via Serper.dev</li>
                         <li>Advanced API rotation for reliability</li>
-                        <li>Intelligent caching for speed</li>
-                        <li>Email extraction from websites</li>
+                        <li>Intelligent pagination for maximum results</li>
+                        <li>Exact keyword phrase matching</li>
                     </ul>
                 </div>
             </div>
@@ -166,9 +168,9 @@
                     Once processing completes, you'll be able to download:
                 </p>
                 <ul class="small">
-                    <li><strong>Complete CSV:</strong> All businesses in one file</li>
-                    <li><strong>City-specific CSVs:</strong> Separate file per city</li>
-                    <li><strong>Filtered exports:</strong> By rating, review count, etc.</li>
+                    <li><strong>Complete CSV:</strong> All URLs in one file</li>
+                    <li><strong>Keyword-specific CSVs:</strong> Separate file per keyword</li>
+                    <li><strong>Filtered exports:</strong> By search ranking, keyword, etc.</li>
                 </ul>
                 
                 <div class="text-center mt-3" id="downloadSection" style="display: none;">
@@ -185,8 +187,8 @@
 {% block scripts %}
 <script>
 const sessionId = {{ session.id }};
-const totalCities = {{ session.get_cities_list()|length }};
-const cities = {{ session.get_cities_list() | tojson }};
+const totalKeywords = {{ (session.keywords.split('\n')|length) }};
+const keywords = {{ session.keywords.split('\n') | tojson }};
 let startTime = new Date().getTime();
 let processingStarted = false;
 
@@ -306,9 +308,9 @@ function updateSingleSearchStatus(data) {
     // Update counters
     document.getElementById('totalBusinesses').textContent = totalBusinesses;
     
-    // Calculate cities processed
-    const citiesProcessed = Math.floor((progress / 100) * totalCities);
-    document.getElementById('keywordsProcessed').textContent = citiesProcessed;
+    // Calculate keywords processed
+    const keywordsProcessed = Math.floor((progress / 100) * totalKeywords);
+    document.getElementById('keywordsProcessed').textContent = keywordsProcessed;
     
     // Update processing time
     if (processingStarted) {
@@ -316,22 +318,22 @@ function updateSingleSearchStatus(data) {
         document.getElementById('processingTime').textContent = elapsed + 's';
     }
     
-    // Update average per city
-    if (citiesProcessed > 0) {
-        const avgPerCity = Math.round(totalBusinesses / citiesProcessed);
-        document.getElementById('averagePerKeyword').textContent = avgPerCity;
+    // Update average per keyword
+    if (keywordsProcessed > 0) {
+        const avgPerKeyword = Math.round(totalBusinesses / keywordsProcessed);
+        document.getElementById('averagePerKeyword').textContent = avgPerKeyword;
     }
     
-    // Update city status indicators
-    cities.forEach((city, index) => {
-        const cityElement = document.getElementById(`city-${index}`);
-        if (cityElement) {
-            if (index < citiesProcessed) {
-                cityElement.innerHTML = '<i class="fas fa-check text-success"></i>';
-            } else if (city === currentLocation) {
-                cityElement.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+    // Update keyword status indicators
+    keywords.forEach((keyword, index) => {
+        const keywordElement = document.getElementById(`keyword-${index}`);
+        if (keywordElement && keyword.trim()) {
+            if (index < keywordsProcessed) {
+                keywordElement.innerHTML = '<i class="fas fa-check text-success"></i>';
+            } else if (keyword.trim() === currentLocation) {
+                keywordElement.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
             } else {
-                cityElement.innerHTML = '<i class="fas fa-clock text-muted"></i>';
+                keywordElement.innerHTML = '<i class="fas fa-clock text-muted"></i>';
             }
         }
     });
