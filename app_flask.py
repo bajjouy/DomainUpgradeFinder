@@ -2531,7 +2531,8 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
         
         for business in businesses:
             # Transform old business data format to new web search format
-            url = business.get('website', business.get('URL', ''))
+            # The to_dict() method returns 'Business Name', 'Website' etc.
+            url = business.get('Website', business.get('URL', ''))
             
             # Extract domain from URL if not already present
             domain = business.get('Domain', '')
@@ -2539,9 +2540,9 @@ MAIL_PASSWORD={config_data.get('mail_password', '')}
                 domain = url.replace('https://', '').replace('http://', '').split('/')[0]
             
             transformed_business = {
-                'Title': business.get('name', business.get('Title', '')),
+                'Title': business.get('Business Name', business.get('Title', '')),
                 'URL': url,
-                'Description': business.get('description', business.get('Description', '')),
+                'Description': business.get('Address', ''),  # Web search descriptions are saved in Address field
                 'Domain': domain,
                 'Rank': business.get('Rank', ''),
                 'Keywords Found': business.get('Keywords Found', ''),
