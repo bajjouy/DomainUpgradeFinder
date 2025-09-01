@@ -1,0 +1,103 @@
+ProgrammingError
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column business_search_sessions.parent_session_id does not exist
+LINE 1: ...AS business_search_sessions_max_results_per_city, business_s...
+                                                             ^
+
+[SQL: SELECT business_search_sessions.id AS business_search_sessions_id, business_search_sessions.user_id AS business_search_sessions_user_id, business_search_sessions.keywords AS business_search_sessions_keywords, business_search_sessions.cities AS business_search_sessions_cities, business_search_sessions.total_businesses_found AS business_search_sessions_total_businesses_found, business_search_sessions.status AS business_search_sessions_status, business_search_sessions.progress AS business_search_sessions_progress, business_search_sessions.current_location AS business_search_sessions_current_location, business_search_sessions.processing_time AS business_search_sessions_processing_time, business_search_sessions.max_results_per_city AS business_search_sessions_max_results_per_city, business_search_sessions.parent_session_id AS business_search_sessions_parent_session_id, business_search_sessions.created_at AS business_search_sessions_created_at, business_search_sessions.completed_at AS business_search_sessions_completed_at 
+FROM business_search_sessions 
+WHERE business_search_sessions.user_id = %(user_id_1)s ORDER BY business_search_sessions.created_at DESC 
+ LIMIT %(param_1)s]
+[parameters: {'user_id_1': 3, 'param_1': 10}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+Traceback (most recent call last)
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+self.dialect.do_execute(
+^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+cursor.execute(statement, parameters)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The above exception was the direct cause of the following exception:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+return self.wsgi_app(environ, start_response)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1514, in wsgi_app
+response = self.handle_exception(e)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+response = self.full_dispatch_request()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+rv = self.handle_user_exception(e)
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+rv = self.dispatch_request()
+     ^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/auth_utils.py", line 31, in decorated_function
+return f(*args, **kwargs)
+       ^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py", line 1314, in __inner
+return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/security_utils.py", line 184, in decorated_function
+response = f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/app_flask.py", line 2358, in business_search
+).order_by(BusinessSearchSession.created_at.desc()).limit(10).all()
+                                                              ^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+return self._iter().all()  # type: ignore
+       ^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2857, in _iter
+result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                              
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+return self._execute_internal(
+       
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+result: Result[Any] = compile_state_cls.orm_execute_statement(
+                      
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+result = conn.execute(
+         
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+return meth(
+       
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 526, in _execute_on_connection
+return connection._execute_clauseelement(
+       
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+ret = self._execute_context(
+      
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+return self._exec_single_context(
+       
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+self._handle_dbapi_exception(
+^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+self.dialect.do_execute(
+^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 951, in do_execute
+cursor.execute(statement, parameters)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column business_search_sessions.parent_session_id does not exist
+LINE 1: ...AS business_search_sessions_max_results_per_city, business_s...
+^
+
+[SQL: SELECT business_search_sessions.id AS business_search_sessions_id, business_search_sessions.user_id AS business_search_sessions_user_id, business_search_sessions.keywords AS business_search_sessions_keywords, business_search_sessions.cities AS business_search_sessions_cities, business_search_sessions.total_businesses_found AS business_search_sessions_total_businesses_found, business_search_sessions.status AS business_search_sessions_status, business_search_sessions.progress AS business_search_sessions_progress, business_search_sessions.current_location AS business_search_sessions_current_location, business_search_sessions.processing_time AS business_search_sessions_processing_time, business_search_sessions.max_results_per_city AS business_search_sessions_max_results_per_city, business_search_sessions.parent_session_id AS business_search_sessions_parent_session_id, business_search_sessions.created_at AS business_search_sessions_created_at, business_search_sessions.completed_at AS business_search_sessions_completed_at
+FROM business_search_sessions
+WHERE business_search_sessions.user_id = %(user_id_1)s ORDER BY business_search_sessions.created_at DESC
+LIMIT %(param_1)s]
+[parameters: {'user_id_1': 3, 'param_1': 10}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+The debugger caught an exception in your WSGI application. You can now look at the traceback which led to the error.
+To switch between the interactive traceback and the plaintext one, you can click on the "Traceback" headline. From the text traceback you can also create a paste of it.
+
+Brought to you by DON'T PANIC, your friendly Werkzeug powered traceback inte
