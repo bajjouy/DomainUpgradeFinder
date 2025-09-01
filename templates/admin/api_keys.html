@@ -156,9 +156,13 @@
                                 </td>
                                 <td>
                                     <a href="{{ url_for('toggle_api_key', key_id=key.id) }}" 
-                                       class="btn btn-sm {{ 'btn-outline-danger' if key.status.value == 'ACTIVE' else 'btn-outline-success' }}">
+                                       class="btn btn-sm {{ 'btn-outline-danger' if key.status.value == 'ACTIVE' else 'btn-outline-success' }} me-2">
                                         {{ 'Deactivate' if key.status.value == 'ACTIVE' else 'Activate' }}
                                     </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="confirmDeleteApiKey('{{ key.id }}', '{{ key.key_name }}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -175,6 +179,28 @@ function clearBulkForm() {
     document.getElementById('bulk_keys').value = '';
     document.getElementById('bulk_daily_limit').value = '2500';
     document.getElementById('bulk_total_credits').value = '2500';
+}
+
+function confirmDeleteApiKey(keyId, keyName) {
+    if (confirm(`Are you sure you want to permanently delete API key "${keyName}"?\n\nThis action cannot be undone.`)) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/api-keys/${keyId}/delete`;
+        
+        // Add CSRF token if you have one (optional)
+        // const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        // if (csrfToken) {
+        //     const input = document.createElement('input');
+        //     input.type = 'hidden';
+        //     input.name = 'csrf_token';
+        //     input.value = csrfToken.getAttribute('content');
+        //     form.appendChild(input);
+        // }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 </script>
 {% endblock %}

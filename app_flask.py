@@ -555,6 +555,21 @@ def create_app():
         flash('API key status updated', 'success')
         return redirect(url_for('admin_api_keys'))
     
+    @app.route('/admin/api-keys/<int:key_id>/delete', methods=['POST'])
+    @admin_required
+    def delete_api_key(key_id):
+        api_key = APIKey.query.get_or_404(key_id)
+        key_name = api_key.key_name
+        
+        # Check if this API key is currently being used in active searches
+        # We could add additional checks here if needed
+        
+        db.session.delete(api_key)
+        db.session.commit()
+        
+        flash(f'✅ API key "{key_name}" has been deleted permanently', 'success')
+        return redirect(url_for('admin_api_keys'))
+    
     @app.route('/admin/users')
     @admin_required
     def admin_users():
