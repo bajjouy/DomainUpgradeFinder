@@ -92,6 +92,121 @@ class BusinessSearchService:
                     'total_businesses': 0
                 }
                 
+                # Handle keyword processing BEFORE city processing
+                # Support both space-separated and newline-separated keywords
+                keywords_input = session.keywords.replace(',', ' ')  # Treat commas as spaces
+                # Split by both spaces and newlines, then clean up
+                keywords_parts = []
+                for line in keywords_input.split('\n'):
+                    keywords_parts.extend(line.split())
+                keywords_list = [kw.strip() for kw in keywords_parts if kw.strip() and len(kw.strip()) > 1]
+                
+                logger.info(f"Found {len(keywords_list)} keywords to process: {keywords_list}")
+                
+                if len(keywords_list) > 1:
+                    # Multiple keywords - process sequentially without city dependency
+                    logger.info(f"🚀 Processing {len(keywords_list)} keywords sequentially")
+                    
+                    child_sessions = []
+                    total_keywords = len(keywords_list)
+                    
+                    for keyword_index, keyword in enumerate(keywords_list):
+                        try:
+                            # Update progress based on keyword completion
+                            progress = (keyword_index / total_keywords) * 100
+                            session.progress = progress
+                            session.current_location = f"Processing keyword: {keyword}"
+                            
+                            self.active_sessions[session_id].update({
+                                'progress': progress,
+                                'current_location': f"Keyword {keyword_index + 1}/{total_keywords}: {keyword}"
+                            })
+                            
+                            db.session.commit()
+                            
+                            logger.info(f"🔍 Processing keyword {keyword_index + 1}/{total_keywords}: '{keyword}'")
+                            
+                            # Create child session for this keyword
+                            child_session = BusinessSearchSession()
+                            child_session.user_id = session.user_id
+                            child_session.keywords = keyword  # Single keyword
+                            child_session.cities = session.cities
+                            child_session.max_results_per_city = session.max_results_per_city
+                            child_session.status = 'processing'
+                            child_session.progress = 0.0
+                            child_session.parent_session_id = session.id  # Link to parent
+                            child_session.created_at = session.created_at
+                            db.session.add(child_session)
+                            db.session.flush()
+                            child_sessions.append(child_session)
+                            
+                            # Search for this exact keyword using web search (no location)
+                            from models import SystemSettings
+                            max_urls_limit = SystemSettings.get_max_urls_per_keyword()
+                            
+                            businesses = self._search_web_results_paginated(
+                                keyword, max_urls_limit, child_session.id
+                            )
+                            
+                            # Save businesses for this child session
+                            for business_data in businesses:
+                                business = BusinessData()
+                                business.session_id = child_session.id
+                                business.user_id = session.user_id
+                                business.keywords_searched = keyword
+                                business.city = "Web Search"  # No specific city for keyword searches
+                                
+                                # Map from API response to database fields
+                                business.name = business_data.get('Title', business_data.get('name', ''))
+                                business.website = business_data.get('URL', business_data.get('website', ''))
+                                business.address = business_data.get('Description', business_data.get('description', ''))
+                                business.phone = business_data.get('phone', '')
+                                business.rating = business_data.get('rating')
+                                business.user_ratings_total = business_data.get('user_ratings_total')
+                                business.price_level = business_data.get('price_level')
+                                business.business_status = 'UNKNOWN'
+                                business.latitude = None
+                                business.longitude = None
+                                business.place_id = None
+                                business.email = None
+                                business.types = json.dumps([])
+                                business.opening_hours = json.dumps([])
+                                
+                                db.session.add(business)
+                            
+                            # Mark child session as completed
+                            child_session.status = 'completed'
+                            child_session.progress = 100.0
+                            child_session.completed_at = datetime.utcnow()
+                            child_session.processing_time = (child_session.completed_at - child_session.created_at).total_seconds()
+                            
+                            db.session.commit()
+                            logger.info(f"✅ Completed keyword '{keyword}': {len(businesses)} results")
+                            
+                        except Exception as keyword_error:
+                            logger.error(f"❌ Error processing keyword '{keyword}': {str(keyword_error)}")
+                            try:
+                                if 'child_session' in locals() and child_session:
+                                    child_session.status = 'failed'
+                                    child_session.progress = 100.0
+                                    child_session.completed_at = datetime.utcnow()
+                                    child_session.processing_time = (child_session.completed_at - child_session.created_at).total_seconds()
+                                    db.session.commit()
+                            except Exception:
+                                pass  # Don't let error handling crash the system
+                            continue
+                    
+                    # Mark parent session as completed
+                    session.status = 'completed'
+                    session.progress = 100.0
+                    session.completed_at = datetime.utcnow()
+                    session.processing_time = (session.completed_at - session.created_at).total_seconds()
+                    
+                    logger.info(f"✅ Completed bulk search with {len(child_sessions)} separate keyword sessions")
+                    db.session.commit()
+                    return  # Exit early - we handled everything
+                
+                # Single keyword or city-based processing
                 logger.info(f"Processing {len(cities)} cities for session {session_id}")
                 
                 for i, city in enumerate(cities):
@@ -108,97 +223,21 @@ class BusinessSearchService:
                         
                         db.session.commit()
                         
-                        # Handle bulk search - create separate sessions for each keyword
-                        keywords_list = [kw.strip() for kw in session.keywords.split('\n') if kw.strip()]
+                        # Single keyword - do exact web search (not location-based)
+                        keyword = keywords_list[0] if keywords_list else session.keywords
+                        logger.info(f"🔍 Processing single keyword: '{keyword}' for city: {city}")
                         
-                        if len(keywords_list) > 1:
-                            # Multiple keywords - create separate sessions for each
-                            child_sessions = []
-                            for keyword in keywords_list:
-                                logger.info(f"🔍 Creating separate session for keyword: '{keyword}'")
-                                
-                                # Create child session for this keyword
-                                child_session = BusinessSearchSession()
-                                child_session.user_id = session.user_id
-                                child_session.keywords = keyword  # Single keyword
-                                child_session.cities = session.cities
-                                child_session.max_results_per_city = session.max_results_per_city
-                                child_session.status = 'processing'
-                                child_session.progress = 0.0
-                                child_session.parent_session_id = session.id  # Link to parent
-                                child_session.created_at = session.created_at
-                                db.session.add(child_session)
-                                db.session.flush()
-                                child_sessions.append(child_session)
-                                
-                                # Search for this exact keyword using web search (no location)
-                                # Get URL limit from system settings instead of session default
-                                from models import SystemSettings
-                                max_urls_limit = SystemSettings.get_max_urls_per_keyword()
-                                
-                                businesses = self._search_web_results_paginated(
-                                    keyword, max_urls_limit, child_session.id
-                                )
-                                
-                                # Save businesses for this child session
-                                for business_data in businesses:
-                                    business = BusinessData()
-                                    business.session_id = child_session.id
-                                    business.user_id = session.user_id
-                                    business.keywords_searched = keyword
-                                    business.city = city
-                                    
-                                    # Map from API response to database fields
-                                    business.name = business_data.get('Title', business_data.get('name', ''))  # Page title
-                                    business.website = business_data.get('URL', business_data.get('website', ''))  # URL
-                                    business.address = business_data.get('Description', business_data.get('description', ''))  # Page snippet
-                                    business.phone = business_data.get('phone', '')
-                                    business.rating = business_data.get('rating')
-                                    business.user_ratings_total = business_data.get('user_ratings_total')
-                                    business.price_level = business_data.get('price_level')
-                                    business.business_status = 'UNKNOWN'
-                                    business.latitude = None
-                                    business.longitude = None
-                                    business.place_id = None
-                                    business.email = None
-                                    business.types = json.dumps([])
-                                    business.opening_hours = json.dumps([])
-                                    
-                                    db.session.add(business)
-                                
-                                # Mark child session as completed
-                                child_session.status = 'completed'
-                                child_session.progress = 100.0
-                                child_session.completed_at = datetime.utcnow()
-                                child_session.processing_time = (child_session.completed_at - child_session.created_at).total_seconds()
-                                
-                                logger.info(f"✅ Completed separate session for '{keyword}': {len(businesses)} results")
-                            
-                            db.session.commit()
-                            
-                            # Mark parent session as completed
-                            session.status = 'completed'
-                            session.progress = 100.0
-                            session.completed_at = datetime.utcnow()
-                            session.processing_time = (session.completed_at - session.created_at).total_seconds()
-                            
-                            logger.info(f"✅ Completed bulk search with {len(child_sessions)} separate keyword sessions")
-                            return  # Exit early - we handled everything
+                        # Get URL limit from system settings instead of session default
+                        from models import SystemSettings
+                        max_urls_limit = SystemSettings.get_max_urls_per_keyword()
                         
-                        else:
-                            # Single keyword - do exact web search (not location-based)
-                            keyword = keywords_list[0] if keywords_list else session.keywords
-                            # Get URL limit from system settings instead of session default
-                            from models import SystemSettings
-                            max_urls_limit = SystemSettings.get_max_urls_per_keyword()
-                            
-                            businesses = self._search_web_results_paginated(
-                                keyword, max_urls_limit, session_id
-                            )
-                            
-                            # Tag each business with the keyword
-                            for business in businesses:
-                                business['search_keyword'] = keyword
+                        businesses = self._search_web_results_paginated(
+                            keyword, max_urls_limit, session_id
+                        )
+                        
+                        # Tag each business with the keyword
+                        for business in businesses:
+                            business['search_keyword'] = keyword
                         
                         # Save businesses page by page with real-time updates
                         saved_count = 0
