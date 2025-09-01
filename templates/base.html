@@ -12,27 +12,28 @@
     
     <style>
         :root {
-            --primary-color: #2563eb;
-            --primary-dark: #1d4ed8;
-            --primary-light: #3b82f6;
-            --secondary-color: #64748b;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --info-color: #06b6d4;
+            /* Professional Color Palette - Inspired by modern SaaS applications */
+            --primary-color: #4f46e5;      /* Refined indigo - more professional than blue */
+            --primary-dark: #3730a3;       /* Deeper indigo for contrast */
+            --primary-light: #6366f1;      /* Lighter indigo for highlights */
+            --secondary-color: #6b7280;    /* Neutral gray */
+            --success-color: #059669;      /* Professional emerald green */
+            --warning-color: #d97706;      /* Warm amber for warnings */
+            --danger-color: #dc2626;       /* Clear red for errors */
+            --info-color: #0891b2;         /* Professional cyan */
             --border-radius: 8px;
             --border-radius-lg: 12px;
             
-            /* Light Mode Colors */
-            --bg-color: #ffffff;
-            --bg-secondary: #f8fafc;
-            --bg-tertiary: #f1f5f9;
-            --text-primary: #1e293b;
-            --text-secondary: #475569;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --border-light: #f1f5f9;
-            --card-bg: #ffffff;
+            /* Light Mode Colors - Clean & Professional */
+            --bg-color: #ffffff;           /* Pure white for clarity */
+            --bg-secondary: #f9fafb;       /* Subtle off-white */
+            --bg-tertiary: #f3f4f6;        /* Light gray for sections */
+            --text-primary: #111827;       /* Near-black for excellent readability */
+            --text-secondary: #374151;     /* Dark gray for secondary text */
+            --text-muted: #6b7280;         /* Medium gray for muted text */
+            --border-color: #d1d5db;       /* Light gray borders */
+            --border-light: #e5e7eb;       /* Very light gray borders */
+            --card-bg: #ffffff;            /* White cards for contrast */
             --navbar-bg: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -40,20 +41,20 @@
         }
 
         [data-theme="dark"] {
-            /* Dark Mode Colors */
-            --bg-color: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
-            --border-color: #334155;
-            --border-light: #475569;
-            --card-bg: #1e293b;
-            --navbar-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+            /* Dark Mode Colors - Professional & Easy on Eyes */
+            --bg-color: #0a0e1a;           /* Very dark blue-gray for depth */
+            --bg-secondary: #1a202c;       /* Dark gray-blue for panels */
+            --bg-tertiary: #2d3748;        /* Medium dark for sections */
+            --text-primary: #f7fafc;       /* Off-white for better readability */
+            --text-secondary: #e2e8f0;     /* Light gray for secondary text */
+            --text-muted: #a0aec0;         /* Medium gray for muted text */
+            --border-color: #2d3748;       /* Dark gray borders */
+            --border-light: #4a5568;       /* Lighter dark borders */
+            --card-bg: #1a202c;            /* Dark panels with slight blue tint */
+            --navbar-bg: linear-gradient(135deg, #0a0e1a 0%, #1a202c 100%);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.5);
         }
 
         * {
@@ -148,7 +149,7 @@
 
         /* Coin Badge */
         .coin-badge {
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            background: linear-gradient(135deg, #fbbf24 0%, var(--warning-color) 100%);
             color: #92400e;
             font-weight: 600;
             border-radius: 20px;
@@ -159,12 +160,18 @@
             gap: 0.25rem;
             box-shadow: var(--shadow-sm);
             border: 1px solid rgba(251, 191, 36, 0.3);
+            backdrop-filter: blur(8px);
         }
 
         .coin-badge.bg-success {
-            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+            background: linear-gradient(135deg, var(--success-color) 0%, #047857 100%);
             color: white;
-            border-color: rgba(16, 185, 129, 0.3);
+            border-color: rgba(5, 150, 105, 0.3);
+        }
+
+        [data-theme="dark"] .coin-badge {
+            color: #fbbf24;
+            border-color: rgba(251, 191, 36, 0.4);
         }
 
         /* Main Content */
@@ -287,37 +294,58 @@
             margin-bottom: 0.5rem;
         }
 
-        /* Alerts */
+        /* Enhanced Alerts with Professional Colors */
         .alert {
             border: none;
             border-radius: var(--border-radius-lg);
             padding: 1rem 1.25rem;
             font-weight: 500;
             border-left: 4px solid;
+            backdrop-filter: blur(8px);
         }
 
         .alert-success {
-            background: rgb(240 253 244);
-            color: #059669;
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--success-color);
             border-left-color: var(--success-color);
         }
 
         .alert-danger {
-            background: rgb(254 242 242);
-            color: #dc2626;
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger-color);
             border-left-color: var(--danger-color);
         }
 
         .alert-warning {
-            background: rgb(255 251 235);
-            color: #d97706;
+            background: rgba(217, 119, 6, 0.1);
+            color: var(--warning-color);
             border-left-color: var(--warning-color);
         }
 
         .alert-info {
-            background: rgb(240 249 255);
-            color: #0891b2;
+            background: rgba(8, 145, 178, 0.1);
+            color: var(--info-color);
             border-left-color: var(--info-color);
+        }
+
+        [data-theme="dark"] .alert-success {
+            background: rgba(5, 150, 105, 0.15);
+            color: #10b981;
+        }
+
+        [data-theme="dark"] .alert-danger {
+            background: rgba(220, 38, 38, 0.15);
+            color: #f87171;
+        }
+
+        [data-theme="dark"] .alert-warning {
+            background: rgba(217, 119, 6, 0.15);
+            color: #fbbf24;
+        }
+
+        [data-theme="dark"] .alert-info {
+            background: rgba(8, 145, 178, 0.15);
+            color: #38bdf8;
         }
 
         /* Tables */
@@ -381,7 +409,7 @@
             z-index: 1000;
             width: 60px;
             height: 60px;
-            background: linear-gradient(135deg, #25d366 0%, #20ba5a 100%);
+            background: linear-gradient(135deg, #25d366 0%, #16a249 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -390,7 +418,8 @@
             text-decoration: none;
             box-shadow: var(--shadow-lg);
             transition: all 0.3s ease;
-            border: 3px solid rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
         }
 
         .whatsapp-button:hover {
@@ -444,10 +473,16 @@
             height: 1rem;
         }
 
-        /* Enhanced Focus States */
+        /* Enhanced Focus States with Professional Colors */
         .btn:focus,
         .form-control:focus {
             outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+
+        [data-theme="dark"] .btn:focus,
+        [data-theme="dark"] .form-control:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
         }
 
         /* Theme Toggle Button */
