@@ -115,37 +115,46 @@ class BusinessSearchService:
                         
                         # Save businesses to database
                         for business_data in businesses:
-                            business = BusinessData()
-                            business.session_id = session.id
-                            business.user_id = session.user_id
-                            business.keywords_searched = session.keywords
-                            business.city = city
-                            
-                            # Map business data
-                            business.name = business_data.get('name', '')
-                            business.address = business_data.get('address', '')
-                            business.phone = business_data.get('phone', '')
-                            business.website = business_data.get('website', '')
-                            business.rating = business_data.get('rating')
-                            business.user_ratings_total = business_data.get('user_ratings_total')
-                            business.price_level = business_data.get('price_level')
-                            business.business_status = business_data.get('business_status', '')
-                            business.latitude = business_data.get('latitude')
-                            business.longitude = business_data.get('longitude')
-                            business.place_id = business_data.get('place_id', '')
-                            
-                            # Set JSON fields
-                            business.set_types_list(business_data.get('types', []))
-                            business.opening_hours = json.dumps(business_data.get('opening_hours', []))
-                            
-                            # Try to extract email from website
-                            if business.website:
-                                business.email = extract_email_from_website(business.website)
-                            
-                            db.session.add(business)
-                            total_businesses_found += 1
+                            try:
+                                business = BusinessData()
+                                business.session_id = session.id
+                                business.user_id = session.user_id
+                                business.keywords_searched = session.keywords
+                                business.city = city
+                                
+                                # Map business data
+                                business.name = business_data.get('name', '')
+                                business.address = business_data.get('address', '')
+                                business.phone = business_data.get('phone', '')
+                                business.website = business_data.get('website', '')
+                                business.rating = business_data.get('rating')
+                                business.user_ratings_total = business_data.get('user_ratings_total')
+                                business.price_level = business_data.get('price_level')
+                                business.business_status = business_data.get('business_status', '')
+                                business.latitude = business_data.get('latitude')
+                                business.longitude = business_data.get('longitude')
+                                business.place_id = business_data.get('place_id', '')
+                                
+                                # Set JSON fields
+                                business.set_types_list(business_data.get('types', []))
+                                business.opening_hours = json.dumps(business_data.get('opening_hours', []))
+                                
+                                # Try to extract email from website
+                                if business.website:
+                                    business.email = extract_email_from_website(business.website)
+                                
+                                db.session.add(business)
+                                total_businesses_found += 1
+                            except Exception as e:
+                                logger.error(f"Error saving business {business_data.get('name', 'Unknown')}: {str(e)}")
+                                continue
                         
-                        db.session.commit()
+                        # Commit businesses for this city
+                        try:
+                            db.session.commit()
+                        except Exception as e:
+                            logger.error(f"Error committing businesses for {city}: {str(e)}")
+                            db.session.rollback()
                         logger.info(f"Found {len(businesses)} businesses in {city}")
                         
                         # Small delay to respect rate limits
@@ -163,7 +172,13 @@ class BusinessSearchService:
                 session.processing_time = end_time - start_time
                 session.completed_at = datetime.utcnow()
                 
-                db.session.commit()
+                # Commit session completion separately
+                try:
+                    db.session.commit()
+                    logger.info(f"Session {session_id} marked as completed successfully")
+                except Exception as e:
+                    logger.error(f"Error marking session as completed: {str(e)}")
+                    db.session.rollback()
                 
                 # Update active sessions
                 self.active_sessions[session_id] = {
