@@ -1146,6 +1146,7 @@ def create_app():
     @client_required
     @limiter.limit("20 per hour")  # Stricter limit for bulk processing
     @secure_headers
+    @csrf.exempt  # Exempt from CSRF since it's an API endpoint with auth + rate limiting
     def process_bulk_search(session_id):
         print(f"DEBUG: Starting bulk search for session {session_id}, user {current_user.id}")
         search_session = SearchSession.query.filter_by(
