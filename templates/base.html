@@ -932,5 +932,511 @@
     </script>
     
     {% block scripts %}{% endblock %}
+    
+    <!-- Interactive Tutorial Modal -->
+    {% if current_user.is_authenticated and not current_user.tutorial_completed %}
+    <div class="modal fade" id="tutorialModal" tabindex="-1" aria-labelledby="tutorialModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title d-flex align-items-center" id="tutorialModalLabel">
+                        <i class="fas fa-graduation-cap me-2"></i>
+                        <span id="tutorialStepTitle">Welcome to Domain Upgrade Pro!</span>
+                    </h5>
+                    <div class="tutorial-progress">
+                        <span id="tutorialStepCounter">1 / 5</span>
+                    </div>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Tutorial Step Content -->
+                    <div id="tutorialStepContent">
+                        <!-- Steps will be populated by JavaScript -->
+                    </div>
+                    
+                    <!-- Interactive Elements -->
+                    <div id="tutorialInteractive" class="mt-4">
+                        <!-- Interactive content will be added by JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer border-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" id="tutorialSkip">
+                        <i class="fas fa-times me-1"></i>Skip Tutorial
+                    </button>
+                    <div>
+                        <button type="button" class="btn btn-outline-primary me-2" id="tutorialPrev" style="display: none;">
+                            <i class="fas fa-arrow-left me-1"></i>Previous
+                        </button>
+                        <button type="button" class="btn btn-primary" id="tutorialNext">
+                            Next<i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .tutorial-progress {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .tutorial-highlight {
+            position: relative;
+            z-index: 1051;
+            animation: tutorialPulse 2s infinite;
+        }
+        
+        @keyframes tutorialPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+        }
+        
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            pointer-events: none;
+        }
+        
+        .tutorial-spotlight {
+            position: absolute;
+            border: 3px solid var(--primary-color);
+            border-radius: 8px;
+            box-shadow: 0 0 0 5px rgba(79, 70, 229, 0.3);
+            pointer-events: auto;
+            animation: tutorialGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes tutorialGlow {
+            0% { box-shadow: 0 0 0 5px rgba(79, 70, 229, 0.3); }
+            100% { box-shadow: 0 0 0 8px rgba(79, 70, 229, 0.6); }
+        }
+        
+        .tutorial-feature-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tutorial-feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .tutorial-feature-card.active {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+        
+        .tutorial-demo-search {
+            background: #f8fafc;
+            border: 2px dashed var(--primary-color);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .tutorial-typing-effect {
+            border-right: 2px solid var(--primary-color);
+            animation: typing 3s steps(20) infinite, blink 1s step-end infinite;
+        }
+        
+        @keyframes typing {
+            0%, 100% { width: 0; }
+            50% { width: 100%; }
+        }
+        
+        @keyframes blink {
+            0%, 50% { border-color: var(--primary-color); }
+            51%, 100% { border-color: transparent; }
+        }
+        
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .modal-dialog.modal-lg {
+                max-width: 95%;
+                margin: 10px auto;
+            }
+            
+            .tutorial-feature-card {
+                padding: 15px;
+                margin: 8px 0;
+            }
+            
+            .tutorial-demo-search {
+                padding: 10px;
+                margin: 10px 0;
+            }
+            
+            .tutorial-typing-effect {
+                font-size: 12px;
+                padding: 8px;
+            }
+            
+            .modal-body {
+                padding: 20px 15px !important;
+            }
+            
+            .modal-footer {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .modal-footer > div {
+                display: flex;
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            #tutorialSkip {
+                order: 2;
+                width: 100%;
+            }
+            
+            .modal-header h5 {
+                font-size: 1.1rem;
+            }
+            
+            .tutorial-progress {
+                font-size: 0.75rem;
+                padding: 2px 8px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .modal-dialog.modal-lg {
+                max-width: 98%;
+                margin: 5px auto;
+            }
+            
+            .row.text-center .col-md-4 {
+                margin-bottom: 20px;
+            }
+            
+            .tutorial-feature-card h6 {
+                font-size: 0.9rem;
+            }
+            
+            .tutorial-feature-card small {
+                font-size: 0.75rem;
+            }
+            
+            .btn-lg {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+
+    <script>
+        // Tutorial System
+        document.addEventListener('DOMContentLoaded', function() {
+            const tutorialModal = document.getElementById('tutorialModal');
+            if (!tutorialModal) return; // Only run if tutorial modal exists
+            
+            const tutorialStepTitle = document.getElementById('tutorialStepTitle');
+            const tutorialStepContent = document.getElementById('tutorialStepContent');
+            const tutorialInteractive = document.getElementById('tutorialInteractive');
+            const tutorialStepCounter = document.getElementById('tutorialStepCounter');
+            const tutorialPrev = document.getElementById('tutorialPrev');
+            const tutorialNext = document.getElementById('tutorialNext');
+            const tutorialSkip = document.getElementById('tutorialSkip');
+            
+            let currentStep = 0;
+            const totalSteps = 5;
+            
+            const tutorialSteps = [
+                {
+                    title: "Welcome to Domain Upgrade Pro! 🚀",
+                    content: `
+                        <div class="text-center mb-4">
+                            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                <i class="fas fa-rocket fa-2x"></i>
+                            </div>
+                        </div>
+                        <h4 class="text-center mb-3">Your Professional Domain Research Platform</h4>
+                        <p class="lead text-center mb-4">Discover profitable domain opportunities by finding businesses that need better domains for their keywords.</p>
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <i class="fas fa-search fa-2x text-primary mb-2"></i>
+                                <h6>Bulk Research</h6>
+                                <small class="text-muted">Process thousands of keywords</small>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-chart-line fa-2x text-success mb-2"></i>
+                                <h6>Find Opportunities</h6>
+                                <small class="text-muted">Identify upgrade prospects</small>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-download fa-2x text-info mb-2"></i>
+                                <h6>Export Results</h6>
+                                <small class="text-muted">Download detailed reports</small>
+                            </div>
+                        </div>
+                    `,
+                    interactive: `
+                        <div class="text-center">
+                            <p class="text-muted">Let's take a quick tour of the platform's key features!</p>
+                        </div>
+                    `
+                },
+                {
+                    title: "Your Dashboard - Command Center 📊",
+                    content: `
+                        <h5><i class="fas fa-tachometer-alt text-primary me-2"></i>Dashboard Overview</h5>
+                        <p>Your dashboard shows everything you need at a glance:</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="tutorial-feature-card">
+                                    <i class="fas fa-coins text-warning fa-lg mb-2"></i>
+                                    <h6>Credit Balance</h6>
+                                    <small>Track your available search credits</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="tutorial-feature-card">
+                                    <i class="fas fa-search text-primary fa-lg mb-2"></i>
+                                    <h6>Recent Searches</h6>
+                                    <small>Quick access to your search history</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tutorial-feature-card mt-3">
+                            <i class="fas fa-star text-success fa-lg mb-2"></i>
+                            <h6>Upgrade Opportunities</h6>
+                            <small>See discovered domains with upgrade potential</small>
+                        </div>
+                    `,
+                    interactive: `
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Pro Tip:</strong> The dashboard automatically refreshes with new opportunities as you complete searches.
+                        </div>
+                    `
+                },
+                {
+                    title: "Keyword Research - The Heart of Discovery 🔍",
+                    content: `
+                        <h5><i class="fas fa-search text-primary me-2"></i>How Keyword Research Works</h5>
+                        <p>This is where the magic happens. Enter keywords to find businesses that could benefit from better domains:</p>
+                        
+                        <div class="tutorial-demo-search">
+                            <i class="fas fa-keyboard text-primary fa-lg mb-2"></i>
+                            <h6>Try typing keywords like:</h6>
+                            <div class="tutorial-typing-effect bg-white p-2 rounded mt-2" style="font-family: monospace; font-size: 14px;">
+                                "Ohio Roofing"<br>
+                                "North Jersey Tent Rentals"<br>
+                                "Seattle Web Design"
+                            </div>
+                        </div>
+                        
+                        <p class="mb-3">Each line = one complete keyword phrase. The system will:</p>
+                        <ol>
+                            <li><strong>Search Google</strong> for your exact keyword phrases</li>
+                            <li><strong>Find competing domains</strong> already ranking for those terms</li>
+                            <li><strong>Identify upgrade opportunities</strong> where your domain would be better</li>
+                        </ol>
+                    `,
+                    interactive: `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="tutorial-feature-card" onclick="this.classList.toggle('active')">
+                                    <i class="fas fa-list fa-lg mb-2"></i>
+                                    <h6>Bulk Processing</h6>
+                                    <small>Process up to 10,000 keywords at once</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="tutorial-feature-card" onclick="this.classList.toggle('active')">
+                                    <i class="fas fa-globe fa-lg mb-2"></i>
+                                    <h6>Real Google Data</h6>
+                                    <small>Live results from actual Google searches</small>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    title: "Understanding Your Results 📈",
+                    content: `
+                        <h5><i class="fas fa-chart-bar text-success me-2"></i>Reading Your Search Results</h5>
+                        <p>After a search completes, you'll see detailed information about each opportunity:</p>
+                        
+                        <div class="card bg-light p-3 mb-3">
+                            <div class="row">
+                                <div class="col-md-3"><strong>Domain Found:</strong></div>
+                                <div class="col-md-9">cleveland-roofing-pros.com</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3"><strong>Keyword:</strong></div>
+                                <div class="col-md-9">"Ohio Roofing"</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3"><strong>Google Rank:</strong></div>
+                                <div class="col-md-9">#3 <span class="badge bg-success">Great Opportunity!</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-target me-2"></i>
+                            <strong>Upgrade Logic:</strong> If they're ranking #3 with "cleveland-roofing-pros.com", 
+                            imagine how much better they'd rank with "OhioRoofing.com"!
+                        </div>
+                    `,
+                    interactive: `
+                        <div class="tutorial-feature-card">
+                            <i class="fas fa-download text-info fa-lg mb-2"></i>
+                            <h6>Export Everything</h6>
+                            <p class="mb-2">Download all results as CSV files for further analysis and outreach.</p>
+                            <button class="btn btn-sm btn-info">
+                                <i class="fas fa-file-csv me-1"></i>Download Sample CSV
+                            </button>
+                        </div>
+                    `
+                },
+                {
+                    title: "You're Ready to Dominate! 💪",
+                    content: `
+                        <div class="text-center mb-4">
+                            <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                <i class="fas fa-trophy fa-2x"></i>
+                            </div>
+                        </div>
+                        <h4 class="text-center mb-3">Congratulations! You're Ready to Start</h4>
+                        <p class="text-center mb-4">You now know how to use Domain Upgrade Pro to find profitable domain opportunities.</p>
+                        
+                        <div class="card bg-primary text-white p-3 mb-3">
+                            <h6><i class="fas fa-gift me-2"></i>Your Free Trial Credits</h6>
+                            <p class="mb-0">You have <strong>50 free credits</strong> to get started. Each keyword search uses approximately 10 credits.</p>
+                        </div>
+                        
+                        <h6>Quick Start Checklist:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Completed tutorial</li>
+                            <li><i class="fas fa-search text-primary me-2"></i>Ready to start your first search</li>
+                            <li><i class="fas fa-coins text-warning me-2"></i>Free trial credits available</li>
+                        </ul>
+                    `,
+                    interactive: `
+                        <div class="text-center">
+                            <a href="/business-search" class="btn btn-lg btn-success me-3">
+                                <i class="fas fa-rocket me-2"></i>Start My First Search
+                            </a>
+                            <button class="btn btn-lg btn-outline-primary" onclick="completeTutorial()">
+                                <i class="fas fa-check me-2"></i>Complete Tutorial
+                            </button>
+                        </div>
+                    `
+                }
+            ];
+            
+            function showStep(step) {
+                if (step < 0 || step >= tutorialSteps.length) return;
+                
+                const stepData = tutorialSteps[step];
+                tutorialStepTitle.textContent = stepData.title;
+                tutorialStepContent.innerHTML = stepData.content;
+                tutorialInteractive.innerHTML = stepData.interactive;
+                tutorialStepCounter.textContent = `${step + 1} / ${totalSteps}`;
+                
+                // Update button states
+                tutorialPrev.style.display = step === 0 ? 'none' : 'inline-block';
+                tutorialNext.innerHTML = step === tutorialSteps.length - 1 ? 
+                    'Complete<i class="fas fa-check ms-1"></i>' : 
+                    'Next<i class="fas fa-arrow-right ms-1"></i>';
+            }
+            
+            function nextStep() {
+                if (currentStep < tutorialSteps.length - 1) {
+                    currentStep++;
+                    showStep(currentStep);
+                } else {
+                    completeTutorial();
+                }
+            }
+            
+            function prevStep() {
+                if (currentStep > 0) {
+                    currentStep--;
+                    showStep(currentStep);
+                }
+            }
+            
+            function completeTutorial() {
+                // Mark tutorial as completed
+                fetch('/api/complete-tutorial', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(() => {
+                    // Close modal and show success message
+                    const modal = bootstrap.Modal.getInstance(tutorialModal);
+                    modal.hide();
+                    
+                    // Show success toast
+                    showToast('🎉 Tutorial completed! You\\'re ready to start finding domain opportunities.', 'success');
+                }).catch(error => {
+                    console.error('Error completing tutorial:', error);
+                });
+            }
+            
+            function skipTutorial() {
+                if (confirm('Are you sure you want to skip the tutorial? You can always restart it from your account settings.')) {
+                    completeTutorial();
+                }
+            }
+            
+            // Event listeners
+            tutorialNext.addEventListener('click', nextStep);
+            tutorialPrev.addEventListener('click', prevStep);
+            tutorialSkip.addEventListener('click', skipTutorial);
+            
+            // Initialize tutorial
+            showStep(0);
+            
+            // Show modal after page loads
+            setTimeout(() => {
+                const modal = new bootstrap.Modal(tutorialModal);
+                modal.show();
+            }, 1000);
+            
+            // Make completeTutorial globally available
+            window.completeTutorial = completeTutorial;
+        });
+        
+        function showToast(message, type = 'info') {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 5000);
+        }
+    </script>
+    {% endif %}
 </body>
 </html>

@@ -930,6 +930,19 @@ def create_app():
         flash(f'Password changed successfully for {user.email}.', 'success')
         return redirect(url_for('admin_users'))
     
+    # Tutorial API Route
+    @app.route('/api/complete-tutorial', methods=['POST'])
+    @client_required
+    def complete_tutorial():
+        """Mark tutorial as completed for current user"""
+        try:
+            current_user.tutorial_completed = True
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Tutorial completed successfully!'})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     # Client Dashboard Routes
     @app.route('/dashboard')
     @client_required

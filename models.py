@@ -35,6 +35,9 @@ class User(UserMixin, db.Model):
     # Free trial coins for new users
     trial_coins_used = db.Column(db.Boolean, default=False)
     
+    # Tutorial completion tracking
+    tutorial_completed = db.Column(db.Boolean, default=False)
+    
     # Relationships
     transactions = db.relationship('CoinTransaction', foreign_keys='CoinTransaction.user_id', backref='user', lazy=True)
     processed_transactions = db.relationship('CoinTransaction', foreign_keys='CoinTransaction.processed_by', backref='processed_by_admin', lazy=True)
