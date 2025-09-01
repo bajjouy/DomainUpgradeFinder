@@ -136,7 +136,7 @@
                                                 <div class="mb-3">
                                                     <label for="amount{{ user.id }}" class="form-label">Amount to Add/Deduct</label>
                                                     <input type="number" class="form-control" id="amount{{ user.id }}" name="amount" 
-                                                           min="-1000000" max="1000000" required>
+                                                           min="-1000000" max="1000000" step="1" autocomplete="off" required>
                                                     <div class="form-text">Use positive numbers to add coins, negative to deduct (Max: ±1,000,000)</div>
                                                 </div>
                                                 <div class="mb-3">
@@ -294,9 +294,10 @@ function confirmDelete(userId) {
     return true;
 }
 
-// Enable delete button when user types DELETE
+// Enable delete button when user types DELETE and handle modal focus
 document.addEventListener('DOMContentLoaded', function() {
     {% for user in users %}
+    // Delete confirmation functionality
     document.getElementById('deleteConfirm{{ user.id }}').addEventListener('input', function() {
         const btn = document.getElementById('deleteBtn{{ user.id }}');
         if (this.value === 'DELETE') {
@@ -308,6 +309,12 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.classList.add('btn-secondary');
             btn.classList.remove('btn-danger');
         }
+    });
+    
+    // Focus on amount input when coin modal opens
+    document.getElementById('adjustCoinsModal{{ user.id }}').addEventListener('shown.bs.modal', function () {
+        document.getElementById('amount{{ user.id }}').focus();
+        document.getElementById('amount{{ user.id }}').select();
     });
     {% endfor %}
 });
