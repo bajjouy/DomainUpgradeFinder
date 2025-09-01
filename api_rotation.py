@@ -202,7 +202,7 @@ class APIRotationManager:
         }
         
         payload = {
-            'q': f'"{query}"',  # Search exact phrase in quotes
+            'q': query,  # Search without quotes to avoid API restrictions
             'num': max_results,
             'gl': 'us',
             'hl': 'en'

@@ -133,8 +133,9 @@ def search_google_web_serper(api_key: str, query: str, location: str = None, num
             'Content-Type': 'application/json'
         }
         
-        # For exact keyword matching - use quotes to search for exact phrases
-        search_query = f'"{query}"' if ' ' in query else query
+        # For keyword matching - avoid quotes for sensitive terms to prevent API restrictions
+        # Instead of exact quotes, use the query directly to avoid "Query not allowed" errors
+        search_query = query
         
         payload = {
             'q': search_query,
