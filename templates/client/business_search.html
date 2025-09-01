@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Business Lead Generator - Domain Upgrade Finder{% endblock %}
+{% block title %}Google Business Search - Domain Upgrade Finder{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2><i class="fas fa-map-marked-alt"></i> Business Lead Generator</h2>
-        <p class="text-muted">Find businesses in specific cities using Google Maps data. Perfect for domain upgrade outreach and lead generation.</p>
+        <h2><i class="fas fa-search"></i> Google Business Search</h2>
+        <p class="text-muted">Search Google to find businesses and extract comprehensive data from search results. Perfect for domain upgrade outreach and lead generation.</p>
         <hr>
     </div>
 </div>
@@ -15,7 +15,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5>Search for Businesses</h5>
+                <h5>Google Business Search</h5>
                 <small class="text-muted">You have {{ current_user.coins }} coins available</small>
             </div>
             <div class="card-body">
@@ -23,43 +23,43 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
                     <div class="mb-3">
-                        <label for="keywords" class="form-label">Business Keywords</label>
+                        <label for="keywords" class="form-label">Search Keywords</label>
                         <input type="text" class="form-control" id="keywords" name="keywords" 
                                placeholder="e.g., restaurants, plumbers, law firms, coffee shops" required>
                         <div class="form-text">
-                            Enter the type of business you want to find (single keyword works best)
+                            Enter business types or services you want to search for on Google
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="cities" class="form-label">Cities (one per line)</label>
+                        <label for="cities" class="form-label">Search Locations (one per line)</label>
                         <textarea class="form-control" id="cities" name="cities" rows="6" 
                                 placeholder="New York, NY&#10;Los Angeles, CA&#10;Chicago, IL&#10;Houston, TX&#10;Phoenix, AZ" required></textarea>
                         <div class="form-text">
-                            Enter cities with state (e.g., "Dallas, TX"). Each city costs 1 coin.
+                            Enter cities/locations to search (e.g., "Dallas, TX"). Each location costs 1 coin.
                             <br><small class="text-info">
                                 <i class="fas fa-info-circle"></i> 
-                                <strong>Tip:</strong> Use full city names with state abbreviations for best results.
+                                <strong>Tip:</strong> Google will search for "[keywords] in [location]" for each location.
                             </small>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="max_results" class="form-label">Results per City</label>
+                        <label for="max_results" class="form-label">Search Results per Location</label>
                         <select class="form-control" id="max_results" name="max_results">
-                            <option value="20">20 businesses per city</option>
-                            <option value="50">50 businesses per city</option>
-                            <option value="100" selected>100 businesses per city (Recommended)</option>
-                            <option value="200">200 businesses per city (Maximum Coverage)</option>
+                            <option value="20">20 search results per location</option>
+                            <option value="50">50 search results per location</option>
+                            <option value="100" selected>100 search results per location (Recommended)</option>
+                            <option value="200">200 search results per location (Maximum Coverage)</option>
                         </select>
                         <div class="form-text">
-                            <strong>Higher numbers = maximum data coverage!</strong> We recommend 100+ for best lead generation results.
+                            <strong>Higher numbers = more comprehensive Google search results!</strong> We recommend 100+ for maximum data coverage.
                         </div>
                     </div>
                     
                     {% if current_user.coins > 0 %}
                     <button type="submit" class="btn btn-success w-100" id="searchBtn">
-                        <i class="fas fa-search"></i> Start Business Search
+                        <i class="fas fa-search"></i> Start Google Search
                     </button>
                     {% else %}
                     <a href="{{ url_for('buy_coins') }}" class="btn btn-warning w-100">
@@ -74,24 +74,24 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5>How Business Search Works</h5>
+                <h5>How Google Business Search Works</h5>
             </div>
             <div class="card-body">
                 <ol>
-                    <li><strong>Enter Keywords:</strong> Type the business type you want to find</li>
-                    <li><strong>List Cities:</strong> Add cities where you want to find these businesses</li>
-                    <li><strong>AI Processing:</strong> We search Google Maps for matching businesses</li>
-                    <li><strong>Get Results:</strong> Download comprehensive business data including:</li>
+                    <li><strong>Enter Keywords:</strong> Type business types or services to search for</li>
+                    <li><strong>List Locations:</strong> Add cities/locations to search in</li>
+                    <li><strong>AI Processing:</strong> We search Google and extract business data from results</li>
+                    <li><strong>Get Results:</strong> Download comprehensive data including:</li>
                 </ol>
                 
                 <ul class="list-unstyled mt-3">
                     <li><i class="fas fa-check text-success"></i> Business names</li>
-                    <li><i class="fas fa-check text-success"></i> Complete addresses</li>
-                    <li><i class="fas fa-check text-success"></i> Phone numbers</li>
                     <li><i class="fas fa-check text-success"></i> Website URLs</li>
+                    <li><i class="fas fa-check text-success"></i> Phone numbers (when found)</li>
+                    <li><i class="fas fa-check text-success"></i> Addresses (when found)</li>
                     <li><i class="fas fa-check text-success"></i> Email addresses (when available)</li>
-                    <li><i class="fas fa-check text-success"></i> Business ratings & reviews</li>
-                    <li><i class="fas fa-check text-success"></i> GPS coordinates</li>
+                    <li><i class="fas fa-check text-success"></i> Google search rankings</li>
+                    <li><i class="fas fa-check text-success"></i> Business descriptions</li>
                 </ul>
             </div>
         </div>
@@ -105,7 +105,7 @@
                     <i class="fas fa-lightbulb text-warning"></i> 
                     <strong>Pro Tip:</strong> Search for businesses that match your premium domain names. 
                     For example, if you own "BestPizza.com", search for "pizza restaurants" in major cities 
-                    to find potential buyers who could upgrade their domain.
+                    to find businesses ranking on Google who could upgrade their domain.
                 </p>
                 
                 <div class="alert alert-info small mb-0">
@@ -122,7 +122,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5>Recent Business Searches</h5>
+                <h5>Recent Google Searches</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
