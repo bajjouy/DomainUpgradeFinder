@@ -161,10 +161,10 @@ class APICreditsScheduler:
                 if low_credit_alerts:
                     log_message += f", {len(low_credit_alerts)} low credit alerts"
                 
-                system_log = SystemLog(
-                    level='info',
-                    message=log_message
-                )
+                from models import SystemLog, db
+                system_log = SystemLog()
+                system_log.level = 'info'
+                system_log.message = log_message
                 db.session.add(system_log)
                 db.session.commit()
                 
@@ -181,11 +181,10 @@ class APICreditsScheduler:
                 
                 # Log error to database if possible
                 try:
-                    from models import SystemLog
-                    system_log = SystemLog(
-                        level='error',
-                        message=error_msg
-                    )
+                    from models import SystemLog, db
+                    system_log = SystemLog()
+                    system_log.level = 'error'
+                    system_log.message = error_msg
                     db.session.add(system_log)
                     db.session.commit()
                 except:

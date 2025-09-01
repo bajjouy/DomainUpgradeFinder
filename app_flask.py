@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import stripe
 import json
@@ -18,6 +21,11 @@ from api_rotation import EnhancedDomainAnalyzer
 from utils import parse_domain_list
 from paypal_integration import PayPalAPI
 from background_scheduler import credits_scheduler
+from security_utils import (
+    validate_form_data, sanitize_input, secure_headers, 
+    log_security_event, rate_limit_exceeded
+)
+from cache_manager import cache_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -31,17 +39,26 @@ def create_app():
     db.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
+    login_manager.login_view = 'login'
+    
+    # Initialize security extensions
+    csrf = CSRFProtect(app)
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["1000 per hour", "100 per minute"],
+        on_breach=rate_limit_exceeded
+    )
     
     migrate = Migrate(app, db)
     
     # Configure Stripe
     stripe.api_key = app.config['STRIPE_SECRET_KEY']
     
-    # Configure PayPal (Sandbox credentials for testing)
-    app.config['PAYPAL_CLIENT_ID'] = os.getenv('PAYPAL_CLIENT_ID', 'AeHNHxV_vMG8O8_Vs-QPHgmJbfHdHFRHSAYKP2dOZjVMy8ZVfz8E-GzuWDqJOPi4oUzXmKcV_f7qlE3m')
-    app.config['PAYPAL_CLIENT_SECRET'] = os.getenv('PAYPAL_CLIENT_SECRET', 'EO5sAflAvkuzDMVaJi2zCwomZILCFx6_YNrtKOzKXUqw8L_7A4lF8QhYDHjlSHRCyLqc8NxW_z1GhZmY')
-    app.config['PAYPAL_MODE'] = os.getenv('PAYPAL_MODE', 'sandbox')
+    # PayPal configuration is handled in config.py
+    # Validate that PayPal credentials are properly configured
+    if not app.config.get('PAYPAL_CLIENT_ID') or not app.config.get('PAYPAL_CLIENT_SECRET'):
+        logger.warning("PayPal credentials not configured - PayPal payments will be disabled")
     
     # Initialize domain analyzer
     app.domain_analyzer = EnhancedDomainAnalyzer()
@@ -99,16 +116,37 @@ def create_app():
     
     # Authentication routes
     @app.route('/login', methods=['GET', 'POST'])
+    @limiter.limit("10 per minute")  # Prevent brute force attacks
+    @secure_headers
     def login():
         if request.method == 'POST':
-            email = request.form.get('email')
-            password = request.form.get('password')
+            # Input validation and sanitization
+            email = sanitize_input(request.form.get('email', ''))
+            password = request.form.get('password', '')
             captcha = request.form.get('captcha', '').upper()
             captcha_answer = request.form.get('captcha_answer', '').upper()
             
-            # Validate captcha first
+            # Validate inputs
+            validation_rules = {
+                'email': {'required': True, 'type': 'email'},
+                'password': {'required': True, 'type': 'safe_string', 'max_length': 200}
+            }
+            
+            is_valid, errors = validate_form_data({
+                'email': email,
+                'password': password
+            }, validation_rules)
+            
+            if not is_valid:
+                for error in errors:
+                    flash(error, 'error')
+                log_security_event('invalid_login_attempt', f'Validation failed: {", ".join(errors)}')
+                return render_template('login.html')
+            
+            # Validate captcha
             if captcha != captcha_answer:
                 flash('Invalid security code. Please try again.', 'error')
+                log_security_event('captcha_failure', f'Failed captcha for email: {email}')
                 return render_template('login.html')
             
             user = User.query.filter_by(email=email).first()
@@ -117,6 +155,7 @@ def create_app():
                 login_user(user)
                 user.last_login = datetime.utcnow()
                 db.session.commit()
+                log_security_event('successful_login', f'User logged in: {email}', user.id)
                 
                 if user.role == UserRole.ADMIN:
                     return redirect(url_for('admin_dashboard'))
@@ -124,6 +163,7 @@ def create_app():
                     return redirect(url_for('client_dashboard'))
             else:
                 flash('Invalid email or password', 'error')
+                log_security_event('failed_login', f'Failed login attempt for email: {email}')
         
         return render_template('login.html')
     
@@ -380,6 +420,94 @@ def create_app():
             result['database_synced'] = False
         
         return jsonify(result)
+    
+    @app.route('/admin/cache')
+    @admin_required
+    @secure_headers
+    def admin_cache_management():
+        """Admin cache management interface"""
+        cache_stats = cache_manager.get_cache_stats()
+        cache_health = cache_manager.health_check()
+        
+        return render_template('admin/cache_management.html', 
+                             cache_stats=cache_stats,
+                             cache_health=cache_health)
+    
+    @app.route('/admin/cache/clear', methods=['POST'])
+    @admin_required
+    @limiter.limit("5 per minute")
+    def admin_clear_cache():
+        """Clear all cache entries"""
+        try:
+            result = cache_manager.clear_all_cache()
+            flash(f"Cache cleared successfully! {result['entries_cleared']} entries removed.", 'success')
+            log_security_event('cache_cleared', f"Admin {current_user.id} cleared all cache", current_user.id)
+        except Exception as e:
+            flash(f"Error clearing cache: {str(e)}", 'error')
+            logger.error(f"Cache clear failed: {str(e)}")
+        
+        return redirect(url_for('admin_cache_management'))
+    
+    @app.route('/api/cache/stats')
+    @admin_required
+    @secure_headers
+    def api_cache_stats():
+        """API endpoint for cache statistics"""
+        return jsonify(cache_manager.get_cache_stats())
+    
+    @app.route('/api/health/cache')
+    @admin_required 
+    @secure_headers
+    def api_cache_health():
+        """API endpoint for cache health check"""
+        return jsonify(cache_manager.health_check())
+    
+    @app.route('/api/health')
+    @limiter.limit("30 per minute")
+    @secure_headers
+    def api_health_check():
+        """System health check endpoint"""
+        try:
+            # Check database connection
+            db_healthy = True
+            try:
+                db.session.execute('SELECT 1')
+            except Exception:
+                db_healthy = False
+            
+            # Check API keys status
+            active_keys = APIKey.query.filter_by(status=APIKeyStatus.ACTIVE).count()
+            total_keys = APIKey.query.count()
+            
+            # Basic cache health
+            cache_stats = cache_manager.get_cache_stats()
+            
+            health_status = {
+                'status': 'healthy' if db_healthy and active_keys > 0 else 'degraded',
+                'timestamp': datetime.utcnow().isoformat(),
+                'components': {
+                    'database': 'healthy' if db_healthy else 'unhealthy',
+                    'api_keys': f'{active_keys}/{total_keys} active',
+                    'cache': {
+                        'status': 'healthy',
+                        'hit_rate': f"{cache_stats['hit_rate']}%",
+                        'entries': cache_stats['entries']
+                    },
+                    'scheduler': 'healthy' if credits_scheduler.is_running else 'stopped'
+                },
+                'version': '1.0.0'
+            }
+            
+            status_code = 200 if health_status['status'] == 'healthy' else 503
+            return jsonify(health_status), status_code
+            
+        except Exception as e:
+            logger.error(f"Health check failed: {str(e)}")
+            return jsonify({
+                'status': 'unhealthy',
+                'error': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            }), 503
     
     @app.route('/admin/api-keys')
     @admin_required
@@ -789,6 +917,8 @@ def create_app():
     
     @app.route('/search', methods=['GET', 'POST'])
     @client_required
+    @limiter.limit("50 per hour")  # Limit search requests to prevent abuse
+    @secure_headers
     def search():
         if request.method == 'POST':
             # Check if user has enough coins (skip for admin users)
@@ -796,13 +926,23 @@ def create_app():
                 flash('You need at least 1 coin to perform a search. Please purchase more coins.', 'error')
                 return redirect(url_for('buy_coins'))
             
-            # Get input
-            keywords_input = request.form.get('keywords', '').strip()
-            # Use adaptive max_results - start with 100, reduce by 10 if fails
-            max_results = 100  # Will be adaptive per search
+            # Get and validate input
+            keywords_input = sanitize_input(request.form.get('keywords', ''))
+            max_results = 100  # Use adaptive max_results - start with 100, reduce by 10 if fails
             
-            if not keywords_input:
-                flash('Please enter keywords to search', 'error')
+            # Validate search input
+            validation_rules = {
+                'keywords': {'required': True, 'type': 'search_keywords'}
+            }
+            
+            is_valid, errors = validate_form_data({
+                'keywords': keywords_input
+            }, validation_rules)
+            
+            if not is_valid:
+                for error in errors:
+                    flash(error, 'error')
+                log_security_event('invalid_search_input', f'User {current_user.id}: {", ".join(errors)}', current_user.id)
                 return render_template('client/search.html')
             
             # Parse keywords (one set per line)
@@ -1004,6 +1144,8 @@ def create_app():
     
     @app.route('/api/bulk-search/<int:session_id>', methods=['POST'])
     @client_required
+    @limiter.limit("20 per hour")  # Stricter limit for bulk processing
+    @secure_headers
     def process_bulk_search(session_id):
         print(f"DEBUG: Starting bulk search for session {session_id}, user {current_user.id}")
         search_session = SearchSession.query.filter_by(

@@ -104,7 +104,7 @@ class APIRotationManager:
         print(f"DEBUG: PARALLEL bulk search completed with {len(results)} total results")
         return results
     
-    def search_google_with_rotation(self, query: str, max_results: int = 10, max_retries: int = None) -> Tuple[List[Dict], Optional[str]]:
+    def search_google_with_rotation(self, query: str, max_results: int = 10, max_retries: Optional[int] = None) -> Tuple[List[Dict], Optional[str]]:
         """
         Search Google with API key rotation and failover with smart result count reduction
         Returns: (results, api_key_used)
@@ -266,13 +266,12 @@ class APIRotationManager:
         error_lower = error_message.lower()
         return any(err in error_lower for err in deactivate_errors)
     
-    def _log_system(self, level: str, message: str, api_key_id: int = None):
+    def _log_system(self, level: str, message: str, api_key_id: Optional[int] = None):
         """Log system events"""
-        log = SystemLog(
-            level=level,
-            message=message,
-            api_key_id=api_key_id
-        )
+        log = SystemLog()
+        log.level = level
+        log.message = message
+        log.api_key_id = api_key_id
         db.session.add(log)
         
         # Also log to Python logger
@@ -347,6 +346,13 @@ class EnhancedDomainAnalyzer:
         start_time = time.time()
         
         try:
+            # Check cache first for faster results
+            from cache_manager import cache_manager
+            cached_results = cache_manager.search_cache.get_search_results(keywords_text, max_results)
+            if cached_results:
+                logger.info(f"Cache HIT: Serving cached analysis for '{keywords_text[:50]}...'")
+                return cached_results['results'], cached_results.get('api_key_used', 'cached')
+            
             # Parse keywords
             keywords = self.parse_keywords(keywords_text)
             
@@ -387,6 +393,15 @@ class EnhancedDomainAnalyzer:
                         'Google_Rank': result['rank'],
                         'Competitor_Title': result['title']
                     })
+            
+            # Cache the results for future use
+            if upgrade_opportunities:
+                cache_manager.search_cache.cache_search_results(
+                    keywords_text, 
+                    upgrade_opportunities, 
+                    max_results
+                )
+                logger.info(f"Cache MISS: Cached new analysis for '{keywords_text[:50]}...' ({len(upgrade_opportunities)} results)")
             
             return upgrade_opportunities, api_key_used
             

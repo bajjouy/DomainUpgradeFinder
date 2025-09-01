@@ -19,4 +19,8 @@ dependencies = [
     "sqlalchemy>=2.0.43",
     "streamlit>=1.28.0",
     "stripe>=12.5.0",
+    "wtforms>=3.2.1",
+    "email-validator>=2.3.0",
+    "flask-wtf>=1.2.2",
+    "flask-limiter>=3.12",
 ]
