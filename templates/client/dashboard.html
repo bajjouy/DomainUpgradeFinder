@@ -1,25 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard - Domain Upgrade Pro{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
-        <hr>
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <div class="bg-primary rounded-circle p-3 me-3">
+                <i class="fas fa-tachometer-alt text-white fa-lg"></i>
+            </div>
+            <div>
+                <h1 class="mb-1 fw-bold">Welcome back!</h1>
+                <p class="text-muted mb-0">Track your domain opportunities and search progress</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('business_search') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus me-2"></i>New Search
+        </a>
     </div>
 </div>
 
-<div class="row mb-4">
+<div class="row g-4 mb-5">
     <div class="col-md-4">
-        <div class="card bg-warning text-white">
-            <div class="card-body text-center">
-                <i class="fas fa-coins fa-3x mb-2"></i>
-                <h3>{{ user.coins }}</h3>
-                <p>Coins Available</p>
-                {% if user.coins < 10 %}
-                <a href="{{ url_for('buy_coins') }}" class="btn btn-light btn-sm">Buy More Coins</a>
-                {% endif %}
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning bg-gradient rounded-3 p-3 me-3">
+                        <i class="fas fa-coins text-white fa-lg"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Available Credits</div>
+                        <div class="h4 fw-bold mb-0">{{ user.coins }}</div>
+                        {% if user.coins < 10 %}
+                            <a href="{{ url_for('buy_coins') }}" class="btn btn-warning btn-sm mt-2">
+                                <i class="fas fa-plus me-1"></i>Buy More
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

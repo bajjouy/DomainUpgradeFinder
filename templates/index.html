@@ -1,17 +1,50 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
-    <div class="col-lg-12 text-center">
-        <h1 class="display-4">Domain Upgrade Finder SaaS</h1>
-        <p class="lead">Find businesses that could upgrade to premium domain names</p>
+<!-- Hero Section -->
+<div class="row align-items-center min-vh-75 py-5">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold mb-4">
+            Find Your Next <br>
+            <span class="text-primary">Domain Upgrade</span> Opportunity
+        </h1>
+        <p class="lead mb-4">Discover businesses ready to upgrade to premium domain names. Our AI-powered platform identifies companies that could benefit from better domains, turning insights into profitable opportunities.</p>
         
         {% if not current_user.is_authenticated %}
-            <div class="mt-4">
-                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-3">Get Started Free</a>
-                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">Login</a>
+            <div class="d-flex gap-3 mb-4">
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-rocket me-2"></i>Start Free Trial
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-4 text-muted small">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <span>5 Free Searches</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <span>No Credit Card Required</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <span>Instant Setup</span>
+                </div>
             </div>
         {% endif %}
+    </div>
+    <div class="col-lg-6">
+        <div class="text-center">
+            <div class="bg-light rounded-lg p-5 shadow-sm">
+                <div class="bg-primary bg-gradient rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                    <i class="fas fa-search text-white fa-2x"></i>
+                </div>
+                <h4 class="fw-semibold mb-3">Powerful Domain Intelligence</h4>
+                <p class="text-muted mb-0">Turn keyword research into profitable domain sales opportunities with our advanced Google search integration.</p>
+            </div>
+        </div>
     </div>
 </div>
 
