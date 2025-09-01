@@ -79,7 +79,7 @@ class BusinessSearchService:
                 if not session:
                     logger.error(f"Session {session_id} not found")
                     return
-            
+                
                 start_time = time.time()
                 cities = session.get_cities_list()
                 total_cities = len(cities)
@@ -91,7 +91,7 @@ class BusinessSearchService:
                     'current_location': None,
                     'total_businesses': 0
                 }
-            
+                
                 logger.info(f"Processing {len(cities)} cities for session {session_id}")
                 
                 for i, city in enumerate(cities):
@@ -154,26 +154,26 @@ class BusinessSearchService:
                     except Exception as e:
                         logger.error(f"Error processing city {city}: {str(e)}")
                         continue
-            
-            # Mark session as completed
-            end_time = time.time()
-            session.status = 'completed'
-            session.progress = 100.0
-            session.total_businesses_found = total_businesses_found
-            session.processing_time = end_time - start_time
-            session.completed_at = datetime.utcnow()
-            
-            db.session.commit()
-            
-            # Update active sessions
-            self.active_sessions[session_id] = {
-                'status': 'completed',
-                'progress': 100.0,
-                'current_location': 'Completed',
-                'total_businesses': total_businesses_found
-            }
-            
-            logger.info(f"Completed session {session_id}: {total_businesses_found} businesses found")
+                
+                # Mark session as completed
+                end_time = time.time()
+                session.status = 'completed'
+                session.progress = 100.0
+                session.total_businesses_found = total_businesses_found
+                session.processing_time = end_time - start_time
+                session.completed_at = datetime.utcnow()
+                
+                db.session.commit()
+                
+                # Update active sessions
+                self.active_sessions[session_id] = {
+                    'status': 'completed',
+                    'progress': 100.0,
+                    'current_location': 'Completed',
+                    'total_businesses': total_businesses_found
+                }
+                
+                logger.info(f"Completed session {session_id}: {total_businesses_found} businesses found")
             
         except Exception as e:
             logger.error(f"Critical error in session {session_id}: {str(e)}")
@@ -204,11 +204,14 @@ class BusinessSearchService:
         """
         # Check cache first
         cache_key = f"business_search:{keywords}:{city}:{max_results}"
-        cached_result = self.cache_manager.get("business_search", {
-            'keywords': keywords, 
-            'city': city, 
-            'max_results': max_results
-        })
+        cached_result = self.cache_manager.get(
+            endpoint_name="business_search",
+            search_params={
+                'keywords': keywords,
+                'city': city,
+                'max_results': max_results
+            }
+        )
         
         if cached_result:
             logger.info(f"Using cached results for {keywords} in {city}")
@@ -250,11 +253,15 @@ class BusinessSearchService:
                 'search_info': result.get('search_info', {}),
                 'total_found': len(businesses)
             }
-            self.cache_manager.put("business_search", {
-                'keywords': keywords, 
-                'city': city, 
-                'max_results': max_results
-            }, cache_data)
+            self.cache_manager.put(
+                endpoint_name="business_search",
+                search_params={
+                    'keywords': keywords,
+                    'city': city,
+                    'max_results': max_results
+                },
+                search_results=cache_data
+            )
             
             logger.info(f"Found {len(businesses)} businesses for {keywords} in {city}")
             return businesses
