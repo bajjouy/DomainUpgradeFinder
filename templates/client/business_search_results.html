@@ -204,9 +204,9 @@
                     <div class="col-md-6">
                         <strong>Data Quality:</strong>
                         <ul>
-                            <li><strong>Businesses with Phone:</strong> {{ results.businesses_by_city.values() | list | sum(attribute='length') | selectattr('Phone') | list | length }} / {{ results.total_businesses }}</li>
-                            <li><strong>Businesses with Website:</strong> {{ results.businesses_by_city.values() | list | sum(attribute='length') | selectattr('Website') | list | length }} / {{ results.total_businesses }}</li>
-                            <li><strong>Businesses with Ratings:</strong> {{ results.businesses_by_city.values() | list | sum(attribute='length') | selectattr('Rating') | list | length }} / {{ results.total_businesses }}</li>
+                            <li><strong>Businesses with Phone:</strong> {{ results.businesses_by_city.values() | list | sum(start=[]) | selectattr('phone') | list | length }} / {{ results.total_businesses }}</li>
+                            <li><strong>Businesses with Website:</strong> {{ results.businesses_by_city.values() | list | sum(start=[]) | selectattr('website') | list | length }} / {{ results.total_businesses }}</li>
+                            <li><strong>Businesses with Ratings:</strong> {{ results.businesses_by_city.values() | list | sum(start=[]) | selectattr('rating') | list | length }} / {{ results.total_businesses }}</li>
                         </ul>
                     </div>
                 </div>
