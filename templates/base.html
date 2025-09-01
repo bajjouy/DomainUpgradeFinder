@@ -41,13 +41,13 @@
         }
 
         [data-theme="dark"] {
-            /* Dark Mode Colors - Warm & Comfortable */
+            /* Dark Mode Colors - High Contrast & Readable */
             --bg-color: #1c1917;           /* Warm dark stone for comfort */
             --bg-secondary: #292524;       /* Warm gray for panels */
             --bg-tertiary: #3c3631;        /* Medium warm gray for sections */
-            --text-primary: #fafaf9;       /* Warm white for excellent readability */
-            --text-secondary: #e7e5e4;     /* Light warm gray for secondary text */
-            --text-muted: #a8a29e;         /* Medium warm gray for muted text */
+            --text-primary: #ffffff;       /* Pure white for maximum readability */
+            --text-secondary: #f3f4f6;     /* Very light gray for secondary text */
+            --text-muted: #d1d5db;         /* Much lighter gray for muted text */
             --border-color: #3c3631;       /* Warm dark borders */
             --border-light: #57534e;       /* Lighter warm borders */
             --card-bg: #292524;            /* Warm dark panels */
@@ -175,6 +175,7 @@
             border-color: rgba(245, 158, 11, 0.4);
         }
 
+        /* Enhanced Dark Mode Text Visibility */
         [data-theme="dark"] .form-control {
             background-color: var(--bg-tertiary);
             border-color: var(--border-light);
@@ -184,6 +185,43 @@
         [data-theme="dark"] .form-control:focus {
             background-color: var(--card-bg);
             border-color: var(--primary-light);
+        }
+
+        [data-theme="dark"] .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        [data-theme="dark"] small,
+        [data-theme="dark"] .small {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-theme="dark"] .card-text {
+            color: var(--text-secondary);
+        }
+
+        [data-theme="dark"] .badge {
+            color: white !important;
+        }
+
+        [data-theme="dark"] .list-group-item {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .table {
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .table th {
+            color: var(--text-primary);
+            background-color: var(--bg-tertiary);
+        }
+
+        [data-theme="dark"] .table td {
+            color: var(--text-secondary);
+            background-color: var(--card-bg);
         }
 
         /* Main Content */
@@ -499,6 +537,26 @@
         [data-theme="dark"] .btn:focus,
         [data-theme="dark"] .form-control:focus {
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        }
+
+        /* Force higher contrast for numbers and statistics */
+        [data-theme="dark"] .display-4,
+        [data-theme="dark"] .display-5,
+        [data-theme="dark"] .display-6,
+        [data-theme="dark"] .h1,
+        [data-theme="dark"] .h2,
+        [data-theme="dark"] .h3,
+        [data-theme="dark"] h1, h2, h3, h4, h5, h6 {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .fw-bold {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .fs-4,
+        [data-theme="dark"] .fs-5 {
+            color: var(--text-primary) !important;
         }
 
         /* Theme Toggle Button */
