@@ -54,8 +54,7 @@ def validate_search_keywords(keywords: str) -> tuple[bool, str]:
     
     keywords = keywords.strip()
     
-    if len(keywords) > 5000:
-        return False, "Keywords too long (maximum 5000 characters)"
+    # No character limit - removed per user request
     
     if len(keywords) < 2:
         return False, "Keywords too short (minimum 2 characters)"

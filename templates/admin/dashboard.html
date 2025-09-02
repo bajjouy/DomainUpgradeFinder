@@ -463,7 +463,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Auto-refresh status every 5 minutes
     setInterval(function() {
-        if (document.querySelector('.badge:contains("Live Data")')) {
+        const liveBadge = Array.from(document.querySelectorAll('.badge')).find(el => el.textContent.includes('Live Data'));
+        if (liveBadge) {
             location.reload();
         }
     }, 300000); // 5 minutes
